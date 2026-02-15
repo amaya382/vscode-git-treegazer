@@ -5,6 +5,10 @@
   "version": "0.1.0",
   "publisher": "amaya382",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/amaya382/vscode-git-treegazer.git"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
