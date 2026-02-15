@@ -2,13 +2,18 @@
   "name": "git-treegazer",
   "displayName": "Git Treegazer",
   "description": "Visualize git log graphs and perform git operations with a compact, information-dense UI",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "amaya382",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/amaya382/vscode-git-treegazer.git"
   },
+  "homepage": "https://github.com/amaya382/vscode-git-treegazer#readme",
+  "bugs": {
+    "url": "https://github.com/amaya382/vscode-git-treegazer/issues"
+  },
+  "icon": "media/icon.png",
   "engines": {
     "vscode": "^1.85.0"
   },
