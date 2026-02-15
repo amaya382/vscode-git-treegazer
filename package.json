@@ -1,0 +1,703 @@
+{
+  "name": "git-treegazer",
+  "displayName": "Git Treegazer",
+  "description": "Visualize git log graphs and perform git operations with a compact, information-dense UI",
+  "version": "0.1.0",
+  "publisher": "amaya382",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "SCM Providers",
+    "Visualization"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "gitTreegazer",
+          "title": "Git Treegazer",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "gitTreegazer": [
+        {
+          "type": "webview",
+          "id": "gitTreegazer.log",
+          "name": "Log"
+        },
+        {
+          "id": "gitTreegazer.branches",
+          "name": "Branches"
+        },
+        {
+          "id": "gitTreegazer.stashes",
+          "name": "Stashes"
+        },
+        {
+          "id": "gitTreegazer.worktrees",
+          "name": "Worktrees"
+        },
+        {
+          "id": "gitTreegazer.config",
+          "name": "Config"
+        }
+      ],
+      "scm": [
+        {
+          "type": "webview",
+          "id": "gitTreegazer.scmLog",
+          "name": "Git Treegazer",
+          "when": "scmProviderCount > 0"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Git Treegazer",
+      "properties": {
+        "gitTreegazer.layout.abbreviateRefPrefixes": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "description": "Max length for slash-separated prefixes in branch names. 0 = no abbreviation. (e.g., 1: feature/auth → f/auth)"
+        },
+        "gitTreegazer.syncWithScm": {
+          "type": "boolean",
+          "default": true,
+          "description": "Synchronize active repository selection with VSCode's built-in Source Control view"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "gitTreegazer.refreshLog",
+        "title": "Refresh Log",
+        "category": "Git Treegazer",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "gitTreegazer.showCommitDiff",
+        "title": "Show Commit Diff",
+        "category": "Git Treegazer"
+      },
+      {
+        "command": "gitTreegazer.compareCommits",
+        "title": "Compare Two Commits",
+        "category": "Git Treegazer"
+      },
+      {
+        "command": "gitTreegazer.copyCommitHash",
+        "title": "Copy Commit Hash",
+        "category": "Git Treegazer",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "gitTreegazer.createBranch",
+        "title": "Create Branch",
+        "category": "Git Treegazer",
+        "icon": "$(add)"
+      },
+      {
+        "command": "gitTreegazer.deleteBranch",
+        "title": "Delete Branch",
+        "category": "Git Treegazer",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "gitTreegazer.checkout",
+        "title": "Checkout Branch",
+        "category": "Git Treegazer",
+        "icon": "$(arrow-swap)"
+      },
+      {
+        "command": "gitTreegazer.merge",
+        "title": "Merge Branch",
+        "category": "Git Treegazer",
+        "icon": "$(git-merge)"
+      },
+      {
+        "command": "gitTreegazer.fetch",
+        "title": "Fetch",
+        "category": "Git Treegazer",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "gitTreegazer.stashCreate",
+        "title": "Create Stash",
+        "category": "Git Treegazer",
+        "icon": "$(add)"
+      },
+      {
+        "command": "gitTreegazer.stashApply",
+        "title": "Apply Stash",
+        "category": "Git Treegazer",
+        "icon": "$(check)"
+      },
+      {
+        "command": "gitTreegazer.stashPop",
+        "title": "Pop Stash",
+        "category": "Git Treegazer",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "gitTreegazer.stashDrop",
+        "title": "Drop Stash",
+        "category": "Git Treegazer",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "gitTreegazer.stashShowDiff",
+        "title": "Show Stash Diff",
+        "category": "Git Treegazer",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "gitTreegazer.stashCopyName",
+        "title": "Copy Stash Name",
+        "category": "Git Treegazer",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "gitTreegazer.stashCreateBranch",
+        "title": "Create Branch from Stash",
+        "category": "Git Treegazer",
+        "icon": "$(git-branch)"
+      },
+      {
+        "command": "gitTreegazer.stashRename",
+        "title": "Rename Stash",
+        "category": "Git Treegazer",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "gitTreegazer.renameBranch",
+        "title": "Rename Branch",
+        "category": "Git Treegazer",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "gitTreegazer.rebaseOnto",
+        "title": "Rebase Current Branch onto This",
+        "category": "Git Treegazer",
+        "icon": "$(git-pull-request)"
+      },
+      {
+        "command": "gitTreegazer.pushBranch",
+        "title": "Push Branch",
+        "category": "Git Treegazer",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "gitTreegazer.pullBranch",
+        "title": "Pull Branch",
+        "category": "Git Treegazer",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "gitTreegazer.copyBranchName",
+        "title": "Copy Branch Name",
+        "category": "Git Treegazer",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "gitTreegazer.refreshBranches",
+        "title": "Refresh Branches",
+        "category": "Git Treegazer",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "gitTreegazer.refreshStashes",
+        "title": "Refresh Stashes",
+        "category": "Git Treegazer",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "gitTreegazer.openInEditor",
+        "title": "Open in Editor",
+        "category": "Git Treegazer",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "gitTreegazer.selectRepo",
+        "title": "Select Repository",
+        "category": "Git Treegazer",
+        "icon": "$(repo)"
+      },
+      {
+        "command": "gitTreegazer.refreshConfig",
+        "title": "Refresh Config",
+        "category": "Git Treegazer",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "gitTreegazer.configEditValue",
+        "title": "Edit Config Value",
+        "category": "Git Treegazer",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "gitTreegazer.configAddEntry",
+        "title": "Add Config Entry",
+        "category": "Git Treegazer",
+        "icon": "$(add)"
+      },
+      {
+        "command": "gitTreegazer.configRemoveEntry",
+        "title": "Remove Config Entry",
+        "category": "Git Treegazer",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "gitTreegazer.configCopyValue",
+        "title": "Copy Config Value",
+        "category": "Git Treegazer",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "gitTreegazer.remoteAdd",
+        "title": "Add Remote",
+        "category": "Git Treegazer",
+        "icon": "$(add)"
+      },
+      {
+        "command": "gitTreegazer.remoteRemove",
+        "title": "Remove Remote",
+        "category": "Git Treegazer",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "gitTreegazer.remoteRename",
+        "title": "Rename Remote",
+        "category": "Git Treegazer",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "gitTreegazer.remoteSetUrl",
+        "title": "Set Remote URL",
+        "category": "Git Treegazer",
+        "icon": "$(link)"
+      },
+      {
+        "command": "gitTreegazer.createWorktree",
+        "title": "Create Worktree",
+        "category": "Git Treegazer",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "gitTreegazer.createWorktreeWithBaretree",
+        "title": "Create Worktree with baretree",
+        "category": "Git Treegazer",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "gitTreegazer.openWorktree",
+        "title": "Open Worktree",
+        "category": "Git Treegazer",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "gitTreegazer.selectWorktreeRepo",
+        "title": "Select Worktree Repository",
+        "category": "Git Treegazer",
+        "icon": "$(repo)"
+      },
+      {
+        "command": "gitTreegazer.refreshWorktrees",
+        "title": "Refresh Worktrees",
+        "category": "Git Treegazer",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "gitTreegazer.worktreeAdd",
+        "title": "Add Worktree",
+        "category": "Git Treegazer",
+        "icon": "$(add)"
+      },
+      {
+        "command": "gitTreegazer.worktreeRemove",
+        "title": "Remove Worktree",
+        "category": "Git Treegazer",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "gitTreegazer.addWorktreeToWorkspace",
+        "title": "Add Worktree to Workspace",
+        "category": "Git Treegazer",
+        "icon": "$(window)"
+      },
+      {
+        "command": "gitTreegazer.worktreePostCreateAdd",
+        "title": "Add Post-Create Action",
+        "category": "Git Treegazer",
+        "icon": "$(add)"
+      },
+      {
+        "command": "gitTreegazer.worktreePostCreateRemove",
+        "title": "Remove Post-Create Action",
+        "category": "Git Treegazer",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "gitTreegazer.worktreeSyncToRootAdd",
+        "title": "Add Sync-to-Root Entry",
+        "category": "Git Treegazer",
+        "icon": "$(add)"
+      },
+      {
+        "command": "gitTreegazer.worktreeSyncToRootRemove",
+        "title": "Remove Sync-to-Root Entry",
+        "category": "Git Treegazer",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "gitTreegazer.interactiveRebase",
+        "title": "Interactive Rebase onto This...",
+        "category": "Git Treegazer",
+        "icon": "$(list-ordered)"
+      },
+      {
+        "command": "gitTreegazer.rebaseContinue",
+        "title": "Rebase Continue",
+        "category": "Git Treegazer"
+      },
+      {
+        "command": "gitTreegazer.rebaseAbort",
+        "title": "Rebase Abort",
+        "category": "Git Treegazer"
+      },
+      {
+        "command": "gitTreegazer.rebaseSkip",
+        "title": "Rebase Skip",
+        "category": "Git Treegazer"
+      },
+      {
+        "command": "gitTreegazer.showLog",
+        "title": "Git Treegazer: Show Log",
+        "category": "Git Treegazer",
+        "icon": "$(telescope)"
+      }
+    ],
+    "menus": {
+      "scm/title": [
+        {
+          "command": "gitTreegazer.showLog",
+          "group": "navigation"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "gitTreegazer.openInEditor",
+          "when": "view == gitTreegazer.log",
+          "group": "navigation"
+        },
+        {
+          "command": "gitTreegazer.openInEditor",
+          "when": "view == gitTreegazer.scmLog",
+          "group": "navigation"
+        },
+        {
+          "command": "gitTreegazer.selectRepo",
+          "when": "view == gitTreegazer.branches && gitTreegazer.multiRepo",
+          "group": "navigation@0"
+        },
+        {
+          "command": "gitTreegazer.refreshBranches",
+          "when": "view == gitTreegazer.branches",
+          "group": "navigation"
+        },
+        {
+          "command": "gitTreegazer.createBranch",
+          "when": "view == gitTreegazer.branches",
+          "group": "navigation"
+        },
+        {
+          "command": "gitTreegazer.fetch",
+          "when": "view == gitTreegazer.branches",
+          "group": "navigation"
+        },
+        {
+          "command": "gitTreegazer.selectRepo",
+          "when": "view == gitTreegazer.stashes && gitTreegazer.multiRepo",
+          "group": "navigation@0"
+        },
+        {
+          "command": "gitTreegazer.refreshStashes",
+          "when": "view == gitTreegazer.stashes",
+          "group": "navigation"
+        },
+        {
+          "command": "gitTreegazer.stashCreate",
+          "when": "view == gitTreegazer.stashes",
+          "group": "navigation"
+        },
+        {
+          "command": "gitTreegazer.selectRepo",
+          "when": "view == gitTreegazer.worktrees && gitTreegazer.multiRepo",
+          "group": "navigation@0"
+        },
+        {
+          "command": "gitTreegazer.refreshWorktrees",
+          "when": "view == gitTreegazer.worktrees",
+          "group": "navigation"
+        },
+        {
+          "command": "gitTreegazer.worktreeAdd",
+          "when": "view == gitTreegazer.worktrees",
+          "group": "navigation"
+        },
+        {
+          "command": "gitTreegazer.selectRepo",
+          "when": "view == gitTreegazer.config && gitTreegazer.multiRepo",
+          "group": "navigation@0"
+        },
+        {
+          "command": "gitTreegazer.refreshConfig",
+          "when": "view == gitTreegazer.config",
+          "group": "navigation"
+        },
+        {
+          "command": "gitTreegazer.configAddEntry",
+          "when": "view == gitTreegazer.config",
+          "group": "navigation"
+        },
+        {
+          "command": "gitTreegazer.remoteAdd",
+          "when": "view == gitTreegazer.config",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "gitTreegazer.checkout",
+          "when": "view == gitTreegazer.branches && viewItem =~ /^(localBranch|remoteBranch|trackedBranch)(Worktree|Current)?$/",
+          "group": "inline"
+        },
+        {
+          "command": "gitTreegazer.copyBranchName",
+          "when": "view == gitTreegazer.branches && viewItem =~ /^(localBranch|remoteBranch|trackedBranch)(Worktree|Current)?$/",
+          "group": "inline"
+        },
+        {
+          "command": "gitTreegazer.createWorktreeWithBaretree",
+          "when": "view == gitTreegazer.branches && viewItem =~ /^(localBranch|trackedBranch|remoteBranch)$/ && gitTreegazer.baretreeAvailable",
+          "group": "0_worktree"
+        },
+        {
+          "command": "gitTreegazer.createWorktree",
+          "when": "view == gitTreegazer.branches && viewItem =~ /^(localBranch|trackedBranch|remoteBranch)$/",
+          "group": "0_worktree"
+        },
+        {
+          "command": "gitTreegazer.selectWorktreeRepo",
+          "when": "view == gitTreegazer.branches && viewItem =~ /Worktree$/",
+          "group": "0_worktree"
+        },
+        {
+          "command": "gitTreegazer.openWorktree",
+          "when": "view == gitTreegazer.branches && viewItem =~ /Worktree$/",
+          "group": "0_worktree"
+        },
+        {
+          "command": "gitTreegazer.addWorktreeToWorkspace",
+          "when": "view == gitTreegazer.branches && viewItem =~ /Worktree$/",
+          "group": "0_worktree"
+        },
+        {
+          "command": "gitTreegazer.checkout",
+          "when": "view == gitTreegazer.branches && viewItem =~ /^(localBranch|remoteBranch|trackedBranch)(Worktree|Current)?$/",
+          "group": "1_actions"
+        },
+        {
+          "command": "gitTreegazer.merge",
+          "when": "view == gitTreegazer.branches && viewItem =~ /^(localBranch|remoteBranch|trackedBranch)(Worktree|Current)?$/",
+          "group": "1_actions"
+        },
+        {
+          "command": "gitTreegazer.rebaseOnto",
+          "when": "view == gitTreegazer.branches && viewItem =~ /^(localBranch|remoteBranch|trackedBranch)(Worktree|Current)?$/",
+          "group": "1_actions"
+        },
+        {
+          "command": "gitTreegazer.interactiveRebase",
+          "when": "view == gitTreegazer.branches && viewItem =~ /^(localBranch|remoteBranch|trackedBranch)(Worktree|Current)?$/",
+          "group": "1_actions"
+        },
+        {
+          "command": "gitTreegazer.pushBranch",
+          "when": "view == gitTreegazer.branches && viewItem =~ /^(localBranch|trackedBranch)(Worktree|Current)?$/",
+          "group": "2_sync"
+        },
+        {
+          "command": "gitTreegazer.pullBranch",
+          "when": "view == gitTreegazer.branches && viewItem =~ /^trackedBranch(Worktree|Current)?$/",
+          "group": "2_sync"
+        },
+        {
+          "command": "gitTreegazer.renameBranch",
+          "when": "view == gitTreegazer.branches && viewItem =~ /^(localBranch|trackedBranch)(Worktree|Current)?$/",
+          "group": "3_modify"
+        },
+        {
+          "command": "gitTreegazer.deleteBranch",
+          "when": "view == gitTreegazer.branches && viewItem =~ /^(localBranch|trackedBranch)(Worktree|Current)?$/",
+          "group": "4_destructive"
+        },
+        {
+          "command": "gitTreegazer.stashApply",
+          "when": "view == gitTreegazer.stashes && viewItem == stashEntry",
+          "group": "inline"
+        },
+        {
+          "command": "gitTreegazer.stashCopyName",
+          "when": "view == gitTreegazer.stashes && viewItem == stashEntry",
+          "group": "inline"
+        },
+        {
+          "command": "gitTreegazer.stashShowDiff",
+          "when": "view == gitTreegazer.stashes && viewItem == stashEntry",
+          "group": "1_actions"
+        },
+        {
+          "command": "gitTreegazer.stashApply",
+          "when": "view == gitTreegazer.stashes && viewItem == stashEntry",
+          "group": "1_actions"
+        },
+        {
+          "command": "gitTreegazer.stashPop",
+          "when": "view == gitTreegazer.stashes && viewItem == stashEntry",
+          "group": "1_actions"
+        },
+        {
+          "command": "gitTreegazer.stashCreateBranch",
+          "when": "view == gitTreegazer.stashes && viewItem == stashEntry",
+          "group": "2_branch"
+        },
+        {
+          "command": "gitTreegazer.stashRename",
+          "when": "view == gitTreegazer.stashes && viewItem == stashEntry",
+          "group": "3_rename"
+        },
+        {
+          "command": "gitTreegazer.stashCopyName",
+          "when": "view == gitTreegazer.stashes && viewItem == stashEntry",
+          "group": "4_copy"
+        },
+        {
+          "command": "gitTreegazer.stashDrop",
+          "when": "view == gitTreegazer.stashes && viewItem == stashEntry",
+          "group": "5_destructive"
+        },
+        {
+          "command": "gitTreegazer.configEditValue",
+          "when": "view == gitTreegazer.config && viewItem == configEntry",
+          "group": "inline"
+        },
+        {
+          "command": "gitTreegazer.configCopyValue",
+          "when": "view == gitTreegazer.config && viewItem =~ /^(configEntry|remoteConfigEntry)$/",
+          "group": "inline"
+        },
+        {
+          "command": "gitTreegazer.configEditValue",
+          "when": "view == gitTreegazer.config && viewItem == remoteConfigEntry",
+          "group": "1_actions"
+        },
+        {
+          "command": "gitTreegazer.configRemoveEntry",
+          "when": "view == gitTreegazer.config && viewItem == configEntry",
+          "group": "2_destructive"
+        },
+        {
+          "command": "gitTreegazer.remoteRename",
+          "when": "view == gitTreegazer.config && viewItem == remoteGroup",
+          "group": "1_actions"
+        },
+        {
+          "command": "gitTreegazer.remoteSetUrl",
+          "when": "view == gitTreegazer.config && viewItem == remoteGroup",
+          "group": "1_actions"
+        },
+        {
+          "command": "gitTreegazer.remoteRemove",
+          "when": "view == gitTreegazer.config && viewItem == remoteGroup",
+          "group": "2_destructive"
+        },
+        {
+          "command": "gitTreegazer.openWorktree",
+          "when": "view == gitTreegazer.worktrees && viewItem =~ /^wtEntry/",
+          "group": "inline"
+        },
+        {
+          "command": "gitTreegazer.addWorktreeToWorkspace",
+          "when": "view == gitTreegazer.worktrees && viewItem =~ /^wtEntry/",
+          "group": "inline"
+        },
+        {
+          "command": "gitTreegazer.openWorktree",
+          "when": "view == gitTreegazer.worktrees && viewItem =~ /^wtEntry/",
+          "group": "1_actions"
+        },
+        {
+          "command": "gitTreegazer.addWorktreeToWorkspace",
+          "when": "view == gitTreegazer.worktrees && viewItem =~ /^wtEntry/",
+          "group": "1_actions"
+        },
+        {
+          "command": "gitTreegazer.worktreeRemove",
+          "when": "view == gitTreegazer.worktrees && viewItem == wtEntry",
+          "group": "2_destructive"
+        },
+        {
+          "command": "gitTreegazer.worktreePostCreateAdd",
+          "when": "view == gitTreegazer.worktrees && viewItem == wtGroup_postCreate",
+          "group": "inline"
+        },
+        {
+          "command": "gitTreegazer.worktreePostCreateRemove",
+          "when": "view == gitTreegazer.worktrees && viewItem == wtPostCreateAction",
+          "group": "inline"
+        },
+        {
+          "command": "gitTreegazer.worktreeSyncToRootAdd",
+          "when": "view == gitTreegazer.worktrees && viewItem == wtGroup_syncToRoot",
+          "group": "inline"
+        },
+        {
+          "command": "gitTreegazer.worktreeSyncToRootRemove",
+          "when": "view == gitTreegazer.worktrees && viewItem == wtSyncToRootEntry",
+          "group": "inline"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "gitTreegazer.worktrees",
+        "contents": "No baretree-managed repository detected.\n[Learn about baretree](https://github.com/amaya382/baretree)",
+        "when": "!gitTreegazer.btRepo"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "package": "vsce package",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@vscode/codicons": "^0.0.44",
+    "simple-git": "^3.27.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.7.0"
+  }
+}

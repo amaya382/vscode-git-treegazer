@@ -1,0 +1,9 @@
+.vscode/**
+src/**
+node_modules/**
+!node_modules/@vscode/codicons/dist/codicon.css
+!node_modules/@vscode/codicons/dist/codicon.ttf
+tsconfig.json
+esbuild.js
+.gitignore
+*.map
