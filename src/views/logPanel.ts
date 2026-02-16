@@ -1433,29 +1433,6 @@ export class LogPanel implements vscode.WebviewViewProvider, vscode.Disposable {
             if (!localNames.includes(name)) localNames.push(name);
           }
           this.branchTipMap.set(c.hash, localNames);
-          if (!c.prInfo) {
-            // Try matching local branch names against branchPRConfig
-            for (const branchName of refBranches) {
-              const configPR = branchPRConfig.get(branchName);
-              if (configPR) {
-                c.prInfo = configPR;
-                break;
-              }
-              // For remote branches like "origin/fix/foo", also try the local name "fix/foo"
-              for (const prefix of remoteNames) {
-                const p = prefix + "/";
-                if (branchName.startsWith(p)) {
-                  const localName = branchName.slice(p.length);
-                  const configPRLocal = branchPRConfig.get(localName);
-                  if (configPRLocal) {
-                    c.prInfo = configPRLocal;
-                    break;
-                  }
-                }
-              }
-              if (c.prInfo) break;
-            }
-          }
         }
         if (c.prInfo) {
           this.lastSentCommits.set(c.hash, c.prInfo);
@@ -2204,11 +2181,6 @@ export class LogPanel implements vscode.WebviewViewProvider, vscode.Disposable {
     .pr-label.pr-closed {
       background: rgba(255, 68, 102, 0.15);
       color: #ff4466;
-    }
-    .pr-label.pr-pending {
-      background: rgba(255, 193, 7, 0.07);
-      color: rgba(230, 167, 0, 0.6);
-      border: 1px solid rgba(255, 193, 7, 0.25);
     }
     .pr-number {
       font-weight: bold;

@@ -15,7 +15,7 @@ interface PullRequestInfo {
   title?: string;
   url?: string;
   state?: "open" | "draft" | "closed" | "merged";
-  source: "pattern" | "github-api" | "git-config";
+  source: "pattern" | "github-api";
   sourceBranch?: string;
 }
 
@@ -156,7 +156,6 @@ const PR_ICONS: Record<string, string> = {
   draft: codicon("git-pull-request-draft", 12),
   closed: codicon("git-pull-request-closed", 12),
   merged: codicon("git-merge", 12),
-  pending: codicon("git-pull-request", 12),
 };
 
 interface LayoutOptions {
@@ -666,8 +665,7 @@ function handleLogData(data: { commits: GitCommit[]; totalCount: number; current
     stashDetail = null;
     stashDetailLoading = false;
     prInfoRequested = new Set<string>();
-    // Preserve github-api sourced cache entries to avoid flickering
-    // (git-config entries show "pending" state that flashes when replaced by API results)
+    // Preserve github-api sourced cache entries to avoid flickering on refresh
     for (const [hash, info] of prInfoCache) {
       if (!info || info.source !== "github-api") {
         prInfoCache.delete(hash);
@@ -1346,22 +1344,18 @@ function buildCommitRow(commit: GitCommit, index: number, wtBranchOutCols?: numb
 
   // PR badge — on non-merge branch tips, hide merged/closed (those are shown on the merge commit itself)
   const cachedPR = prInfoCache.get(commit.hash);
-  const prInfo = cachedPR !== undefined ? (cachedPR ?? commit.prInfo ?? undefined) : commit.prInfo;
-  const prState = prInfo ? (prInfo.state || (prInfo.source === "git-config" ? "pending" : "open")) : undefined;
+  const prInfo = cachedPR !== undefined ? (cachedPR ?? undefined) : commit.prInfo;
+  const prState = prInfo ? (prInfo.state || "open") : undefined;
   const hideBranchTipPR = commit.isBranchTip && !commit.isMergeCommit && (prState === "merged" || prState === "closed");
   if (prInfo && !hideBranchTipPR) {
     const prLabel = document.createElement("span");
     prLabel.className = "pr-label pr-" + prState + (prInfo.url ? " has-url" : "");
     prLabel.innerHTML = `${PR_ICONS[prState ?? "open"]}<span class="pr-number">#${prInfo.number}</span>`;
-    if (prState === "pending") {
-      prLabel.title = "Fetching PR status...";
-    } else {
-      const tooltipParts: string[] = [`Pull Request #${prInfo.number}`];
-      if (prInfo.title) tooltipParts.push(prInfo.title);
-      if (prInfo.sourceBranch) tooltipParts.push(`from ${prInfo.sourceBranch}`);
-      if (prInfo.state) tooltipParts.push(`(${prInfo.state})`);
-      prLabel.title = tooltipParts.join(" \u2014 ");
-    }
+    const tooltipParts: string[] = [`Pull Request #${prInfo.number}`];
+    if (prInfo.title) tooltipParts.push(prInfo.title);
+    if (prInfo.sourceBranch) tooltipParts.push(`from ${prInfo.sourceBranch}`);
+    if (prInfo.state) tooltipParts.push(`(${prInfo.state})`);
+    prLabel.title = tooltipParts.join(" \u2014 ");
     if (prInfo.url) {
       prLabel.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -2223,7 +2217,7 @@ function buildDetailPanel(commit: GitCommit): HTMLElement {
   }
   // PR info in detail panel (only show on the merge commit)
   const cachedDetailPR = prInfoCache.get(detail.hash);
-  const detailPrInfo = cachedDetailPR !== undefined ? (cachedDetailPR ?? detail.prInfo ?? undefined) : detail.prInfo;
+  const detailPrInfo = cachedDetailPR !== undefined ? (cachedDetailPR ?? undefined) : detail.prInfo;
   if (detailPrInfo) {
     let prDisplay = `#${detailPrInfo.number}`;
     if (detailPrInfo.title) prDisplay += ` ${escapeHtml(detailPrInfo.title)}`;
@@ -3269,19 +3263,17 @@ function handlePRInfo(data: Record<string, PullRequestInfo | null>): void {
   let needsRender = false;
   for (const [hash, info] of Object.entries(data)) {
     const existing = prInfoCache.get(hash);
-    if (info && (!existing || existing.source === "pattern" || existing.source === "git-config")) {
+    if (info && info.source === "github-api" && (!existing || existing.source !== "github-api")) {
+      // API result replaces any non-API entry (pattern)
       prInfoCache.set(hash, info);
       needsRender = true;
-    } else if (info && existing && existing.source === "github-api" && existing.state !== info.state) {
+    } else if (info && info.source === "github-api" && existing && existing.source === "github-api" && existing.state !== info.state) {
       // Update cached github-api entry when PR state has changed (e.g. open -> merged)
       prInfoCache.set(hash, info);
       needsRender = true;
     } else if (info === null && !existing) {
-      // Only cache null if there's no existing info to preserve
-      const commit = commits.find(c => c.hash === hash);
-      if (!commit?.prInfo) {
-        prInfoCache.set(hash, null);
-      }
+      // Cache null to mark that API search completed with no result
+      prInfoCache.set(hash, null);
     }
   }
   if (needsRender) {
@@ -3298,7 +3290,7 @@ function requestPRInfoForVisibleCommits(): void {
       prInfoCache.set(commit.hash, commit.prInfo);
       continue;
     }
-    // Branch tip commits (including git-config ones) need API to resolve state
+    // Branch tip commits need API to resolve PR state
     if (commit.isBranchTip) {
       hashesToFetch.push(commit.hash);
     }

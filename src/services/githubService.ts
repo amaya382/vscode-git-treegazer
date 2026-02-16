@@ -157,7 +157,12 @@ export class GitHubService implements vscode.Disposable {
 
     try {
       const info = await promise;
-      this.cache.set(sha, info);
+      // Only cache definitive results (API-sourced or null).
+      // Don't cache rate-limited fallbacks (pattern) so they get retried
+      // once the rate limit expires.
+      if (info === null || info.source === "github-api") {
+        this.cache.set(sha, info);
+      }
       return info;
     } finally {
       this.pendingRequests.delete(sha);
@@ -232,7 +237,8 @@ export class GitHubService implements vscode.Disposable {
       if (result) return result;
     }
 
-    return patternInfo ?? null;
+    // API searched but PR not found — return null so pending labels are cleared
+    return null;
   }
 
   private async fetchBranchPR(
