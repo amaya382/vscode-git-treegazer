@@ -46,7 +46,7 @@ export class GitHubService implements vscode.Disposable {
     }
     this.rateLimitNotifiedAt = now;
     vscode.window.showWarningMessage(
-      "Git Journey: GitHub API rate limit exceeded. PR information may be incomplete. Sign in to GitHub for a higher limit.",
+      "Git Treegazer: GitHub API rate limit exceeded. PR information may be incomplete. Sign in to GitHub for a higher limit.",
     );
   }
 
@@ -217,7 +217,7 @@ export class GitHubService implements vscode.Disposable {
           };
         }
       } else if (response.status === 403 || response.status === 429) {
-        console.warn("Git Journey: GitHub API rate limit exceeded, pausing for 60s");
+        console.warn("Git Treegazer: GitHub API rate limit exceeded, pausing for 60s");
         this.rateLimitedUntil = Date.now() + 60_000;
         this.notifyRateLimit();
         return patternInfo ?? null;
