@@ -46,7 +46,7 @@ export class GitHubService implements vscode.Disposable {
     }
     this.rateLimitNotifiedAt = now;
     vscode.window.showWarningMessage(
-      "Git Journey: GitHub API rate limit exceeded. PR information may be incomplete. Sign in to GitHub for a higher limit.",
+      "Git Treegazer: GitHub API rate limit exceeded. PR information may be incomplete. Sign in to GitHub for a higher limit.",
     );
   }
 
@@ -157,7 +157,12 @@ export class GitHubService implements vscode.Disposable {
 
     try {
       const info = await promise;
-      this.cache.set(sha, info);
+      // Only cache definitive results (API-sourced or null).
+      // Don't cache rate-limited fallbacks (pattern) so they get retried
+      // once the rate limit expires.
+      if (info === null || info.source === "github-api") {
+        this.cache.set(sha, info);
+      }
       return info;
     } finally {
       this.pendingRequests.delete(sha);
@@ -217,7 +222,7 @@ export class GitHubService implements vscode.Disposable {
           };
         }
       } else if (response.status === 403 || response.status === 429) {
-        console.warn("Git Journey: GitHub API rate limit exceeded, pausing for 60s");
+        console.warn("Git Treegazer: GitHub API rate limit exceeded, pausing for 60s");
         this.rateLimitedUntil = Date.now() + 60_000;
         this.notifyRateLimit();
         return patternInfo ?? null;
@@ -232,7 +237,8 @@ export class GitHubService implements vscode.Disposable {
       if (result) return result;
     }
 
-    return patternInfo ?? null;
+    // API searched but PR not found — return null so pending labels are cleared
+    return null;
   }
 
   private async fetchBranchPR(

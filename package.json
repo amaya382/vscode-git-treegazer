@@ -2,7 +2,7 @@
   "name": "git-treegazer",
   "displayName": "Git Treegazer",
   "description": "Observe your Git repository from the treetop — VSCode Git UI with first-class worktree & baretree support",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "publisher": "amaya382",
   "license": "MIT",
   "repository": {

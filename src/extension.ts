@@ -118,7 +118,7 @@ export async function activate(
 
   context.subscriptions.push(
     vscode.commands.registerCommand(COMMANDS.REFRESH_LOG, () =>
-      logPanel.refresh(),
+      logPanel.refresh(true),
     ),
     vscode.commands.registerCommand(COMMANDS.REFRESH_BRANCHES, () =>
       branchTree.refresh(),
