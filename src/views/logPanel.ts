@@ -2208,7 +2208,7 @@ export class LogPanel implements vscode.WebviewViewProvider, vscode.Disposable {
     .pr-label.pr-pending {
       background: rgba(255, 193, 7, 0.07);
       color: rgba(230, 167, 0, 0.6);
-      border: 1px dashed rgba(255, 193, 7, 0.25);
+      border: 1px solid rgba(255, 193, 7, 0.25);
     }
     .pr-number {
       font-weight: bold;
