@@ -2934,6 +2934,19 @@ function showRefContextMenu(x: number, y: number, ref: RefInfo): void {
           baretreeRecommended: baretreeAvailable,
         });
       }
+      if (baretreeAvailable) {
+        items.push({
+          label: `Create Worktree from This Branch with baretree`,
+          icon: codicon("list-tree", 14),
+          action: () => vscode.postMessage({ type: "createWorktreeFromBaseRefWithBaretree", ref: ref.name, refType: ref.type }),
+        });
+      }
+      items.push({
+        label: `Create Worktree from This Branch`,
+        icon: codicon("list-tree", 14),
+        action: () => vscode.postMessage({ type: "createWorktreeFromBaseRef", ref: ref.name, refType: ref.type }),
+        baretreeRecommended: baretreeAvailable,
+      });
       items.push({
         label: `Checkout ${ref.name}`,
         icon: codicon("check", 14),
@@ -2997,6 +3010,19 @@ function showRefContextMenu(x: number, y: number, ref: RefInfo): void {
         label: `Create Worktree from '${ref.name}'`,
         icon: codicon("list-tree", 14),
         action: () => vscode.postMessage({ type: "createWorktreeFromRef", ref: ref.name, refType: "remote" }),
+        baretreeRecommended: baretreeAvailable,
+      });
+      if (baretreeAvailable) {
+        items.push({
+          label: `Create Worktree from This Branch with baretree`,
+          icon: codicon("list-tree", 14),
+          action: () => vscode.postMessage({ type: "createWorktreeFromBaseRefWithBaretree", ref: ref.name, refType: "remote" }),
+        });
+      }
+      items.push({
+        label: `Create Worktree from This Branch`,
+        icon: codicon("list-tree", 14),
+        action: () => vscode.postMessage({ type: "createWorktreeFromBaseRef", ref: ref.name, refType: "remote" }),
         baretreeRecommended: baretreeAvailable,
       });
       items.push({

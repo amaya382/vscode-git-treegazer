@@ -216,6 +216,8 @@ export type WebviewMessage =
   | { type: "selectWorktreeRepo"; branch: string }
   | { type: "createWorktreeFromRef"; ref: string; refType: "branch" | "remote" | "head" }
   | { type: "createWorktreeWithBaretreeFromRef"; ref: string; refType: "branch" | "remote" | "head" }
+  | { type: "createWorktreeFromBaseRef"; ref: string; refType: "branch" | "remote" | "head" }
+  | { type: "createWorktreeFromBaseRefWithBaretree"; ref: string; refType: "branch" | "remote" | "head" }
   | { type: "createWorktreeFromCommit"; hash: string }
   | { type: "createWorktreeWithBaretreeFromCommit"; hash: string }
   | { type: "renameWorktree"; branch: string }

@@ -510,6 +510,104 @@ export function registerBranchCommands(
     ),
 
     vscode.commands.registerCommand(
+      COMMANDS.CREATE_WORKTREE_FROM_BASE_WITH_BARETREE,
+      async (arg?: unknown) => {
+        const service = repoManager.getActiveService();
+        if (!service) return;
+
+        const baseBranchName = resolveBranchName(arg);
+        if (!baseBranchName) return;
+
+        const newBranchName = await vscode.window.showInputBox({
+          prompt: `New branch name (base: ${baseBranchName})`,
+          placeHolder: "feat/new-feature",
+          validateInput: (value) => {
+            if (!value.trim()) return "Branch name is required";
+            if (/\s/.test(value)) return "Branch name cannot contain spaces";
+            return null;
+          },
+        });
+        if (!newBranchName) return;
+
+        try {
+          const result = await service.btAddWorktree(newBranchName.trim(), baseBranchName);
+          onRefresh();
+          const action = await vscode.window.showInformationMessage(
+            `Worktree created for '${newBranchName.trim()}' (base: ${baseBranchName}).${result ? `\n${result}` : ""}`,
+            "Open Worktree",
+          );
+          if (action === "Open Worktree") {
+            const wtPath = repoManager.getWorktreePathForBranch(newBranchName.trim());
+            if (wtPath) {
+              vscode.commands.executeCommand("vscode.openFolder", vscode.Uri.file(wtPath), { forceNewWindow: true });
+            }
+          }
+        } catch (err) {
+          vscode.window.showErrorMessage(
+            `Failed to create worktree: ${err instanceof Error ? err.message : err}`,
+          );
+        }
+      },
+    ),
+
+    vscode.commands.registerCommand(
+      COMMANDS.CREATE_WORKTREE_FROM_BASE,
+      async (arg?: unknown) => {
+        const service = repoManager.getActiveService();
+        if (!service) return;
+
+        const baseBranchName = resolveBranchName(arg);
+        if (!baseBranchName) return;
+
+        if (await service.isBtRepo()) {
+          const btConfirm = await vscode.window.showWarningMessage(
+            `This repository uses baretree. "Create Worktree from This Branch with baretree" is recommended instead. Continue anyway?`,
+            { modal: true },
+            "Continue",
+          );
+          if (btConfirm !== "Continue") return;
+        }
+
+        const newBranchName = await vscode.window.showInputBox({
+          prompt: `New branch name (base: ${baseBranchName})`,
+          placeHolder: "feat/new-feature",
+          validateInput: (value) => {
+            if (!value.trim()) return "Branch name is required";
+            if (/\s/.test(value)) return "Branch name cannot contain spaces";
+            return null;
+          },
+        });
+        if (!newBranchName) return;
+
+        const wtPath = await vscode.window.showInputBox({
+          prompt: `Worktree path for '${newBranchName.trim()}'`,
+          placeHolder: "/path/to/worktree",
+          validateInput: (value) => {
+            if (!value.trim()) return "Path is required";
+            return null;
+          },
+        });
+        if (!wtPath) return;
+
+        try {
+          await service.addWorktree(wtPath, newBranchName.trim(), baseBranchName);
+          const action = await vscode.window.showInformationMessage(
+            `Worktree created at '${wtPath}' for '${newBranchName.trim()}' (base: ${baseBranchName}).`,
+            "Open Worktree",
+          );
+          if (action === "Open Worktree") {
+            vscode.commands.executeCommand("vscode.openFolder", vscode.Uri.file(wtPath), { forceNewWindow: true });
+          }
+          onRefresh();
+        } catch (err) {
+          vscode.window.showErrorMessage(
+            `Failed to create worktree: ${err instanceof Error ? err.message : err}`,
+          );
+        }
+      },
+    ),
+
+    vscode.commands.registerCommand(
       COMMANDS.COPY_BRANCH_NAME,
       async (arg?: unknown) => {
         let branchName = resolveBranchName(arg);
