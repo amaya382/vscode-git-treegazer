@@ -330,10 +330,14 @@ const refreshBtn = document.getElementById("refreshBtn")!;
 applyWidths();
 
 fetchBtn.addEventListener("click", () => {
+  fetchBtn.classList.add("spinning");
+  const icon = fetchBtn.querySelector(".codicon")!;
+  icon.className = "codicon codicon-sync";
   vscode.postMessage({ type: "fetch" });
 });
 
 refreshBtn.addEventListener("click", () => {
+  refreshBtn.classList.add("spinning");
   vscode.postMessage({ type: "refresh" });
 });
 
@@ -657,6 +661,7 @@ function handleLogData(data: { commits: GitCommit[]; totalCount: number; current
     compareDetailData = null;
     compareLoading = false;
     prInfoRequested = new Set<string>();
+    prInfoCache.clear();
   } else if (data.commits.length === 0 && commits.length === 0) {
     commits = [];
     totalCount = data.totalCount;
@@ -730,6 +735,12 @@ function handleCommitDetail(detail: CommitDetail): void {
 function handleLoading(loading: boolean): void {
   if (loading && commits.length === 0) {
     content.innerHTML = '<div class="loading">Loading...</div>';
+  }
+  if (!loading) {
+    fetchBtn.classList.remove("spinning");
+    const fetchIcon = fetchBtn.querySelector(".codicon")!;
+    fetchIcon.className = "codicon codicon-cloud-download";
+    refreshBtn.classList.remove("spinning");
   }
 }
 
@@ -3213,6 +3224,10 @@ function handlePRInfo(data: Record<string, PullRequestInfo | null>): void {
   for (const [hash, info] of Object.entries(data)) {
     const existing = prInfoCache.get(hash);
     if (info && (!existing || existing.source === "pattern" || existing.source === "git-config")) {
+      prInfoCache.set(hash, info);
+      needsRender = true;
+    } else if (info && existing && existing.source === "github-api" && existing.state !== info.state) {
+      // Update cached github-api entry when PR state has changed (e.g. open -> merged)
       prInfoCache.set(hash, info);
       needsRender = true;
     } else if (info === null && !existing) {

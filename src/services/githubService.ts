@@ -281,6 +281,10 @@ export class GitHubService implements vscode.Disposable {
     return null;
   }
 
+  clearCache(): void {
+    this.cache.clear();
+  }
+
   dispose(): void {
     this.disposables.forEach((d) => d.dispose());
   }
