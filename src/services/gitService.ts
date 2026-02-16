@@ -600,7 +600,14 @@ export class GitService {
   }
 
   async pull(branch: string, remote = "origin"): Promise<string> {
-    const result = await this.git.raw(["pull", remote, branch]);
+    const currentBranch = await this.getCurrentBranch();
+    if (branch === currentBranch) {
+      // Current branch: normal pull (fetch + merge into working tree)
+      const result = await this.git.raw(["pull", remote, branch]);
+      return result.trim() || "Pull completed";
+    }
+    // Non-current branch: fast-forward update via fetch refspec
+    const result = await this.git.raw(["fetch", remote, `${branch}:${branch}`]);
     return result.trim() || "Pull completed";
   }
 
