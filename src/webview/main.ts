@@ -2867,6 +2867,11 @@ function showRefContextMenu(x: number, y: number, ref: RefInfo): void {
           icon: codicon("window", 14),
           action: () => vscode.postMessage({ type: "addWorktreeToWorkspace", branch: ref.name }),
         });
+        items.push({
+          label: `Open Terminal at Worktree`,
+          icon: codicon("terminal", 14),
+          action: () => vscode.postMessage({ type: "openTerminalAtWorktree", branch: ref.name }),
+        });
         if (baretreeAvailable) {
           items.push({
             label: `Rename Worktree '${ref.name}' with baretree`,

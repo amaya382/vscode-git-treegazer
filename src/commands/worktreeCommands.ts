@@ -200,6 +200,32 @@ export function registerWorktreeCommands(
       }
     }),
 
+    vscode.commands.registerCommand(COMMANDS.OPEN_TERMINAL_AT_WORKTREE, async (arg?: unknown) => {
+      let worktreePath: string | undefined;
+
+      if (arg && typeof arg === "object" && "worktree" in arg) {
+        worktreePath = (arg as { worktree: BaretreeWorktreeEntry }).worktree.path;
+      } else if (typeof arg === "string") {
+        worktreePath = repoManager.getWorktreePathForBranch(arg);
+      } else if (arg && typeof arg === "object" && "label" in arg) {
+        const label = (arg as { label: unknown }).label;
+        if (typeof label === "string") {
+          worktreePath = repoManager.getWorktreePathForBranch(label);
+        }
+      }
+
+      if (!worktreePath) {
+        vscode.window.showErrorMessage("Could not determine worktree path.");
+        return;
+      }
+
+      const terminal = vscode.window.createTerminal({
+        cwd: worktreePath,
+        name: path.basename(worktreePath),
+      });
+      terminal.show();
+    }),
+
     vscode.commands.registerCommand(COMMANDS.WORKTREE_SYNC_TO_ROOT_REMOVE, async (arg?: unknown) => {
       const service = repoManager.getActiveService();
       if (!service) return;

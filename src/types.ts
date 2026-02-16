@@ -223,6 +223,7 @@ export type WebviewMessage =
   | { type: "deleteWorktree"; branch: string }
   | { type: "deleteWorktreeWithBaretree"; branch: string }
   | { type: "addWorktreeToWorkspace"; branch: string }
+  | { type: "openTerminalAtWorktree"; branch: string }
   | { type: "requestAuthors" }
   | { type: "interactiveRebaseOntoCommit"; hash: string }
   | { type: "requestUncommittedDetail"; branch?: string }
