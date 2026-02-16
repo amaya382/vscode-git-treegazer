@@ -367,10 +367,23 @@ export function registerBranchCommands(
         const service = repoManager.getActiveService();
         if (!service) return;
 
+        const currentBranch = await service.getCurrentBranch();
         let branchName = resolveBranchName(arg);
         if (!branchName) {
-          const currentBranch = await service.getCurrentBranch();
           branchName = currentBranch;
+        }
+
+        // If the branch is checked out in another worktree, pull from that worktree
+        // to avoid "refusing to fetch into branch checked out at ..." errors.
+        let pullService = service;
+        if (branchName !== currentBranch) {
+          const wtPath = repoManager.getWorktreePathForBranch(branchName);
+          if (wtPath) {
+            const wtService = repoManager.getServiceForPath(wtPath);
+            if (wtService) {
+              pullService = wtService;
+            }
+          }
         }
 
         try {
@@ -380,7 +393,7 @@ export function registerBranchCommands(
               title: `Pulling '${branchName}'...`,
             },
             async () => {
-              await service.pull(branchName!);
+              await pullService.pull(branchName!);
             },
           );
           vscode.window.showInformationMessage(`Pull '${branchName}' completed.`);
