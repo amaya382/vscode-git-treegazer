@@ -1,8 +1,8 @@
 {
   "name": "git-treegazer",
   "displayName": "Git Treegazer",
-  "description": "Visualize git log graphs and perform git operations with a compact, information-dense UI",
-  "version": "0.1.1",
+  "description": "Observe your Git repository from the treetop — VSCode Git UI with first-class worktree & baretree support",
+  "version": "0.2.0",
   "publisher": "amaya382",
   "license": "MIT",
   "repository": {
@@ -734,7 +734,8 @@
   "scripts": {
     "compile": "node esbuild.js",
     "watch": "node esbuild.js --watch",
-    "package": "vsce package",
+    "package": "npx @vscode/vsce package",
+    "publish": "npx @vscode/vsce publish",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
