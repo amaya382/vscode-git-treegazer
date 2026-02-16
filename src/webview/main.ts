@@ -1336,11 +1336,15 @@ function buildCommitRow(commit: GitCommit, index: number, wtBranchOutCols?: numb
     const prLabel = document.createElement("span");
     prLabel.className = "pr-label pr-" + prState + (prInfo.url ? " has-url" : "");
     prLabel.innerHTML = `${PR_ICONS[prState ?? "open"]}<span class="pr-number">#${prInfo.number}</span>`;
-    const tooltipParts: string[] = [`Pull Request #${prInfo.number}`];
-    if (prInfo.title) tooltipParts.push(prInfo.title);
-    if (prInfo.sourceBranch) tooltipParts.push(`from ${prInfo.sourceBranch}`);
-    if (prInfo.state) tooltipParts.push(`(${prInfo.state})`);
-    prLabel.title = tooltipParts.join(" \u2014 ");
+    if (prState === "pending") {
+      prLabel.title = "Fetching PR status...";
+    } else {
+      const tooltipParts: string[] = [`Pull Request #${prInfo.number}`];
+      if (prInfo.title) tooltipParts.push(prInfo.title);
+      if (prInfo.sourceBranch) tooltipParts.push(`from ${prInfo.sourceBranch}`);
+      if (prInfo.state) tooltipParts.push(`(${prInfo.state})`);
+      prLabel.title = tooltipParts.join(" \u2014 ");
+    }
     if (prInfo.url) {
       prLabel.addEventListener("click", (e) => {
         e.stopPropagation();

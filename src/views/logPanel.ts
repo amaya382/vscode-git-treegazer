@@ -2183,8 +2183,8 @@ export class LogPanel implements vscode.WebviewViewProvider, vscode.Disposable {
       color: #51cf66;
     }
     .pr-label.pr-draft {
-      background: rgba(81, 207, 102, 0.12);
-      color: rgba(81, 207, 102, 0.6);
+      background: rgba(140, 149, 159, 0.2);
+      color: #8c959f;
     }
     .pr-label.pr-merged {
       background: rgba(217, 142, 255, 0.2);
@@ -2195,8 +2195,9 @@ export class LogPanel implements vscode.WebviewViewProvider, vscode.Disposable {
       color: #ff4466;
     }
     .pr-label.pr-pending {
-      background: rgba(180, 180, 180, 0.15);
-      color: #999;
+      background: rgba(255, 193, 7, 0.07);
+      color: rgba(230, 167, 0, 0.6);
+      border: 1px dashed rgba(255, 193, 7, 0.25);
     }
     .pr-number {
       font-weight: bold;
