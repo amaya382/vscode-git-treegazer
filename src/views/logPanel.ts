@@ -1370,6 +1370,7 @@ export class LogPanel implements vscode.WebviewViewProvider, vscode.Disposable {
   // --- Data sending ---
 
   async refresh(): Promise<void> {
+    this.githubService.clearCache();
     for (const target of this.getActiveWebviews()) {
       await this.sendLogTo(target, DEFAULT_LOG_COUNT, 0, this.currentFilter);
     }
@@ -2825,13 +2826,20 @@ export class LogPanel implements vscode.WebviewViewProvider, vscode.Disposable {
     @keyframes codicon-spin {
       100% { transform: rotate(360deg); }
     }
+    button.spinning {
+      pointer-events: none;
+      opacity: 0.6;
+    }
+    button.spinning .codicon {
+      animation: codicon-spin 1.5s steps(30) infinite;
+    }
   </style>
 </head>
 <body>
   <div class="toolbar" id="filterBar">
     <select id="repoSelect" title="Select repository"></select>
     <button id="fetchBtn" title="Fetch"><i class="codicon codicon-cloud-download"></i></button>
-    <button id="refreshBtn" title="Refresh">&#x21bb;</button>
+    <button id="refreshBtn" title="Refresh"><i class="codicon codicon-sync"></i></button>
     <span id="containmentFilterChip" style="display:none;"></span>
     <div class="layout-options-wrapper">
       <button id="layoutOptionsBtn" class="layout-options-btn" title="Layout options">&#x2699;</button>
