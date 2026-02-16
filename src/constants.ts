@@ -54,6 +54,7 @@ export const COMMANDS = {
   WORKTREE_POST_CREATE_REMOVE: `${EXTENSION_ID}.worktreePostCreateRemove`,
   WORKTREE_SYNC_TO_ROOT_ADD: `${EXTENSION_ID}.worktreeSyncToRootAdd`,
   WORKTREE_SYNC_TO_ROOT_REMOVE: `${EXTENSION_ID}.worktreeSyncToRootRemove`,
+  OPEN_TERMINAL_AT_WORKTREE: `${EXTENSION_ID}.openTerminalAtWorktree`,
   INTERACTIVE_REBASE: `${EXTENSION_ID}.interactiveRebase`,
   REBASE_CONTINUE: `${EXTENSION_ID}.rebaseContinue`,
   REBASE_ABORT: `${EXTENSION_ID}.rebaseAbort`,

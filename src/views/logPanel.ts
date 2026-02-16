@@ -318,6 +318,18 @@ export class LogPanel implements vscode.WebviewViewProvider, vscode.Disposable {
         break;
       }
 
+      case "openTerminalAtWorktree": {
+        const wtPathForTerminal = this.repoManager.getWorktreePathForBranch(msg.branch);
+        if (wtPathForTerminal) {
+          const terminal = vscode.window.createTerminal({
+            cwd: wtPathForTerminal,
+            name: path.basename(wtPathForTerminal),
+          });
+          terminal.show();
+        }
+        break;
+      }
+
       case "addWorktreeToWorkspace": {
         const wtPathForWs = this.repoManager.getWorktreePathForBranch(msg.branch);
         if (wtPathForWs) {

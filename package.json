@@ -387,6 +387,12 @@
         "category": "Git Treegazer"
       },
       {
+        "command": "gitTreegazer.openTerminalAtWorktree",
+        "title": "Open Terminal at Worktree",
+        "category": "Git Treegazer",
+        "icon": "$(terminal)"
+      },
+      {
         "command": "gitTreegazer.showLog",
         "title": "Git Treegazer: Show Log",
         "category": "Git Treegazer",
@@ -515,6 +521,11 @@
         },
         {
           "command": "gitTreegazer.addWorktreeToWorkspace",
+          "when": "view == gitTreegazer.branches && viewItem =~ /Worktree$/",
+          "group": "0_worktree"
+        },
+        {
+          "command": "gitTreegazer.openTerminalAtWorktree",
           "when": "view == gitTreegazer.branches && viewItem =~ /Worktree$/",
           "group": "0_worktree"
         },
@@ -655,6 +666,11 @@
         },
         {
           "command": "gitTreegazer.addWorktreeToWorkspace",
+          "when": "view == gitTreegazer.worktrees && viewItem =~ /^wtEntry/",
+          "group": "1_actions"
+        },
+        {
+          "command": "gitTreegazer.openTerminalAtWorktree",
           "when": "view == gitTreegazer.worktrees && viewItem =~ /^wtEntry/",
           "group": "1_actions"
         },
