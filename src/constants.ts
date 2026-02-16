@@ -44,6 +44,8 @@ export const COMMANDS = {
   REMOTE_SET_URL: `${EXTENSION_ID}.remoteSetUrl`,
   CREATE_WORKTREE: `${EXTENSION_ID}.createWorktree`,
   CREATE_WORKTREE_WITH_BARETREE: `${EXTENSION_ID}.createWorktreeWithBaretree`,
+  CREATE_WORKTREE_FROM_BASE: `${EXTENSION_ID}.createWorktreeFromBase`,
+  CREATE_WORKTREE_FROM_BASE_WITH_BARETREE: `${EXTENSION_ID}.createWorktreeFromBaseWithBaretree`,
   OPEN_WORKTREE: `${EXTENSION_ID}.openWorktree`,
   SELECT_WORKTREE_REPO: `${EXTENSION_ID}.selectWorktreeRepo`,
   REFRESH_WORKTREES: `${EXTENSION_ID}.refreshWorktrees`,

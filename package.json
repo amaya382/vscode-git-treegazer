@@ -306,6 +306,18 @@
         "icon": "$(list-tree)"
       },
       {
+        "command": "gitTreegazer.createWorktreeFromBase",
+        "title": "Create Worktree from This Branch",
+        "category": "Git Treegazer",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "gitTreegazer.createWorktreeFromBaseWithBaretree",
+        "title": "Create Worktree from This Branch with baretree",
+        "category": "Git Treegazer",
+        "icon": "$(list-tree)"
+      },
+      {
         "command": "gitTreegazer.openWorktree",
         "title": "Open Worktree",
         "category": "Git Treegazer",
@@ -501,6 +513,16 @@
         {
           "command": "gitTreegazer.createWorktree",
           "when": "view == gitTreegazer.branches && viewItem =~ /^(localBranch|trackedBranch|remoteBranch)$/",
+          "group": "0_worktree"
+        },
+        {
+          "command": "gitTreegazer.createWorktreeFromBaseWithBaretree",
+          "when": "view == gitTreegazer.branches && viewItem =~ /^(localBranch|trackedBranch|remoteBranch)(Worktree|Current)?$/ && gitTreegazer.baretreeAvailable",
+          "group": "0_worktree"
+        },
+        {
+          "command": "gitTreegazer.createWorktreeFromBase",
+          "when": "view == gitTreegazer.branches && viewItem =~ /^(localBranch|trackedBranch|remoteBranch)(Worktree|Current)?$/",
           "group": "0_worktree"
         },
         {
