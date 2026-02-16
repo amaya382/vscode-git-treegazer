@@ -210,6 +210,14 @@ export class LogPanel implements vscode.WebviewViewProvider, vscode.Disposable {
         await vscode.commands.executeCommand(COMMANDS.CREATE_WORKTREE_WITH_BARETREE, msg.ref);
         break;
 
+      case "createWorktreeFromBaseRef":
+        await vscode.commands.executeCommand(COMMANDS.CREATE_WORKTREE_FROM_BASE, msg.ref);
+        break;
+
+      case "createWorktreeFromBaseRefWithBaretree":
+        await vscode.commands.executeCommand(COMMANDS.CREATE_WORKTREE_FROM_BASE_WITH_BARETREE, msg.ref);
+        break;
+
       case "cherryPick":
         await this.handleCherryPick(msg.hash);
         break;
