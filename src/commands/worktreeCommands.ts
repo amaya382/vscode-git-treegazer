@@ -59,7 +59,17 @@ export function registerWorktreeCommands(
 
       try {
         const withBranch = confirm === "Remove & Delete Branch";
-        await service.btRemoveWorktree(branch, withBranch, false);
+        try {
+          await service.btRemoveWorktree(branch, withBranch, false);
+        } catch (err) {
+          const forceConfirm = await vscode.window.showWarningMessage(
+            `Worktree '${branch}' has uncommitted changes. Force remove?`,
+            { modal: true },
+            "Force Remove",
+          );
+          if (forceConfirm !== "Force Remove") return;
+          await service.btRemoveWorktree(branch, withBranch, true);
+        }
         vscode.window.showInformationMessage(`Worktree '${branch}' removed with baretree`);
         onRefresh();
       } catch (err) {
