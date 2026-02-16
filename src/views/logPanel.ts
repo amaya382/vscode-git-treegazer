@@ -1377,8 +1377,10 @@ export class LogPanel implements vscode.WebviewViewProvider, vscode.Disposable {
 
   // --- Data sending ---
 
-  async refresh(): Promise<void> {
-    this.githubService.clearCache();
+  async refresh(clearPRCache = false): Promise<void> {
+    if (clearPRCache) {
+      this.githubService.clearCache();
+    }
     for (const target of this.getActiveWebviews()) {
       await this.sendLogTo(target, DEFAULT_LOG_COUNT, 0, this.currentFilter);
     }

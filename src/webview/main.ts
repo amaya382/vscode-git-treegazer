@@ -666,7 +666,13 @@ function handleLogData(data: { commits: GitCommit[]; totalCount: number; current
     stashDetail = null;
     stashDetailLoading = false;
     prInfoRequested = new Set<string>();
-    prInfoCache.clear();
+    // Preserve github-api sourced cache entries to avoid flickering
+    // (git-config entries show "pending" state that flashes when replaced by API results)
+    for (const [hash, info] of prInfoCache) {
+      if (!info || info.source !== "github-api") {
+        prInfoCache.delete(hash);
+      }
+    }
   } else if (data.commits.length === 0 && commits.length === 0) {
     commits = [];
     totalCount = data.totalCount;
