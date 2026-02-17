@@ -684,6 +684,51 @@ export class GitService {
     }
   }
 
+  async getDefaultBranch(): Promise<string | undefined> {
+    try {
+      const raw = await this.git.raw(["symbolic-ref", "refs/remotes/origin/HEAD"]);
+      const ref = raw.trim(); // e.g. "refs/remotes/origin/main"
+      const match = ref.match(/^refs\/remotes\/[^/]+\/(.+)$/);
+      if (match) return match[1];
+    } catch {
+      // origin/HEAD not set, fall back to heuristics
+    }
+    for (const candidate of ["main", "master"]) {
+      try {
+        await this.git.raw(["rev-parse", "--verify", `refs/heads/${candidate}`]);
+        return candidate;
+      } catch {
+        // branch doesn't exist
+      }
+    }
+    return undefined;
+  }
+
+  async getEffectiveMergedBranches(defaultBranch: string): Promise<string[]> {
+    const merged = await this.getMergedBranches(defaultBranch);
+    if (merged.size === 0) return [];
+
+    // Get commit hashes for all local branches to exclude those pointing to the same commit as defaultBranch
+    try {
+      const raw = await this.git.raw(["for-each-ref", "--format=%(refname:short) %(objectname)", "refs/heads/"]);
+      if (!raw.trim()) return [...merged].filter(b => b !== defaultBranch);
+
+      const branchCommits = new Map<string, string>();
+      for (const line of raw.trim().split("\n")) {
+        const spaceIdx = line.indexOf(" ");
+        if (spaceIdx === -1) continue;
+        branchCommits.set(line.substring(0, spaceIdx), line.substring(spaceIdx + 1));
+      }
+
+      const defaultCommit = branchCommits.get(defaultBranch);
+      if (!defaultCommit) return [...merged].filter(b => b !== defaultBranch);
+
+      return [...merged].filter(b => b !== defaultBranch && branchCommits.get(b) !== defaultCommit);
+    } catch {
+      return [...merged].filter(b => b !== defaultBranch);
+    }
+  }
+
   async getBranchesContaining(hash: string): Promise<string[]> {
     const raw = await this.git.raw(["branch", "-a", "--contains", hash, "--no-color"]);
     if (!raw.trim()) return [];

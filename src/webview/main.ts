@@ -163,9 +163,10 @@ interface LayoutOptions {
 }
 let layoutOptions: LayoutOptions = { abbreviateRefPrefixes: 0 };
 let remoteNames: string[] = [];
-let worktreeBranches: Map<string, { name: string; path: string; isManaged?: boolean; isDefault?: boolean; isMerged?: boolean }> = new Map();
+let worktreeBranches: Map<string, { name: string; path: string; isManaged?: boolean; isDefault?: boolean }> = new Map();
 let branchDivergence: Record<string, { ahead: number; behind: number }> = {};
 let worktreeUncommitted: Record<string, { staged: number; unstaged: number; untracked: number }> = {};
+let mergedBranches: Set<string> = new Set();
 let worktreeRebaseStates: Map<string, { worktreePath: string; currentStep?: number; totalSteps?: number; hasConflicts: boolean }> = new Map();
 
 interface GitConfigEntry {
@@ -576,13 +577,14 @@ function abbreviateRefName(name: string, maxLength: number): string {
   return [...parts.slice(0, -1).map((p) => p.slice(0, maxLength)), parts[parts.length - 1]].join("/");
 }
 
-function handleLogData(data: { commits: GitCommit[]; totalCount: number; currentBranch: string; remoteNames: string[]; worktreeBranches?: Record<string, { name: string; path: string }>; branchDivergence?: Record<string, { ahead: number; behind: number }>; activeFilter?: LogFilter; isReset?: boolean; uncommittedChanges?: UncommittedInfo; worktreeUncommitted?: Record<string, { staged: number; unstaged: number; untracked: number }>; worktreeRebaseStates?: Array<{ branch: string; worktreePath: string; currentStep?: number; totalSteps?: number; hasConflicts: boolean }>; stashes?: StashEntry[]; baretreeAvailable?: boolean }): void {
+function handleLogData(data: { commits: GitCommit[]; totalCount: number; currentBranch: string; remoteNames: string[]; worktreeBranches?: Record<string, { name: string; path: string }>; branchDivergence?: Record<string, { ahead: number; behind: number }>; activeFilter?: LogFilter; isReset?: boolean; uncommittedChanges?: UncommittedInfo; worktreeUncommitted?: Record<string, { staged: number; unstaged: number; untracked: number }>; mergedBranches?: string[]; worktreeRebaseStates?: Array<{ branch: string; worktreePath: string; currentStep?: number; totalSteps?: number; hasConflicts: boolean }>; stashes?: StashEntry[]; baretreeAvailable?: boolean }): void {
   currentBranch = data.currentBranch;
   remoteNames = data.remoteNames;
   worktreeBranches = new Map(Object.entries(data.worktreeBranches || {}));
   baretreeAvailable = data.baretreeAvailable ?? false;
   branchDivergence = data.branchDivergence || {};
   worktreeUncommitted = data.worktreeUncommitted || {};
+  mergedBranches = new Set(data.mergedBranches || []);
   worktreeRebaseStates = new Map();
   if (data.worktreeRebaseStates) {
     for (const s of data.worktreeRebaseStates) {
@@ -1263,11 +1265,12 @@ function buildCommitRow(commit: GitCommit, index: number, wtBranchOutCols?: numb
         nameSpan.textContent = displayName;
         label.title = entry.remotes.map((r) => r.name).join(", ");
         label.appendChild(nameSpan);
+        const isMergedBranch = mergedBranches.has(info.name) && !worktreeUncommitted[info.name];
+        if (isMergedBranch) {
+          label.classList.add("ref-merged");
+        }
         const wtInfo = worktreeBranches.get(info.name);
         if (wtInfo) {
-          if (wtInfo.isMerged && !worktreeUncommitted[info.name]) {
-            label.classList.add("ref-merged");
-          }
           const wtIcon = document.createElement("span");
           wtIcon.className = "ref-icon";
           wtIcon.innerHTML = `<span class="codicon codicon-list-tree" style="font-size:13px"></span>`;
@@ -1282,8 +1285,11 @@ function buildCommitRow(commit: GitCommit, index: number, wtBranchOutCols?: numb
           const wtTooltip = `Worktree: ${wtInfo.name} (${wtInfo.path})`
             + (wtInfo.isManaged ? "\n[Managed by baretree]" : "")
             + (wtInfo.isDefault ? "\n[Default worktree]" : "")
-            + (wtInfo.isMerged ? "\n[Merged]" : "");
+            + (isMergedBranch ? "\n[Merged]" : "");
           label.title = label.title ? `${label.title}\n${wtTooltip}` : wtTooltip;
+        } else if (isMergedBranch) {
+          const mergedTooltip = "[Merged]";
+          label.title = label.title ? `${label.title}\n${mergedTooltip}` : mergedTooltip;
         }
         appendRebaseIndicator(label, info.name);
         label.addEventListener("contextmenu", (e) => {
@@ -1333,11 +1339,12 @@ function buildCommitRow(commit: GitCommit, index: number, wtBranchOutCols?: numb
             const divTooltip = `Ahead: ${div.ahead}, Behind: ${div.behind}`;
             label.title = label.title ? `${label.title}\n${divTooltip}` : divTooltip;
           }
+          const isMergedStandalone = mergedBranches.has(info.name) && !worktreeUncommitted[info.name];
+          if (isMergedStandalone) {
+            label.classList.add("ref-merged");
+          }
           const wtInfo = worktreeBranches.get(info.name);
           if (wtInfo) {
-            if (wtInfo.isMerged && !worktreeUncommitted[info.name]) {
-              label.classList.add("ref-merged");
-            }
             const wtIcon = document.createElement("span");
             wtIcon.className = "ref-icon";
             wtIcon.innerHTML = `<span class="codicon codicon-list-tree" style="font-size:13px"></span>`;
@@ -1352,8 +1359,11 @@ function buildCommitRow(commit: GitCommit, index: number, wtBranchOutCols?: numb
             const wtTooltip = `Worktree: ${wtInfo.name} (${wtInfo.path})`
               + (wtInfo.isManaged ? "\n[Managed by baretree]" : "")
               + (wtInfo.isDefault ? "\n[Default worktree]" : "")
-              + (wtInfo.isMerged ? "\n[Merged]" : "");
+              + (isMergedStandalone ? "\n[Merged]" : "");
             label.title = label.title ? `${label.title}\n${wtTooltip}` : wtTooltip;
+          } else if (isMergedStandalone) {
+            const mergedTooltip = "[Merged]";
+            label.title = label.title ? `${label.title}\n${mergedTooltip}` : mergedTooltip;
           }
         }
         if (info.type === "branch" || info.type === "head") {
