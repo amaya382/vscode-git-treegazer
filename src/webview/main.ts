@@ -648,7 +648,11 @@ function handleLogData(data: { commits: GitCommit[]; totalCount: number; current
     // Full reset (repo switch, refresh, filter change)
     // Preserve inline detail state if the selected commit still exists in the new data
     const newHashes = new Set(data.commits.map((c: { hash: string }) => c.hash));
-    const preserveSelection = selectedHash !== null && newHashes.has(selectedHash);
+    const isUncommittedSelected = selectedHash !== null &&
+      (selectedHash === UNCOMMITTED_HASH || selectedHash.startsWith("__wt_uncommitted_"));
+    const isStashSelected = selectedHash !== null && selectedHash.startsWith(STASH_HASH_PREFIX);
+    const preserveSelection = selectedHash !== null &&
+      (newHashes.has(selectedHash) || isUncommittedSelected || isStashSelected);
     commits = data.commits;
     totalCount = data.totalCount;
     if (!preserveSelection) {
@@ -660,10 +664,14 @@ function handleLogData(data: { commits: GitCommit[]; totalCount: number; current
       compareDetailData = null;
       compareLoading = false;
     }
-    uncommittedDetail = null;
-    uncommittedDetailLoading = false;
-    stashDetail = null;
-    stashDetailLoading = false;
+    if (!isUncommittedSelected) {
+      uncommittedDetail = null;
+      uncommittedDetailLoading = false;
+    }
+    if (!isStashSelected) {
+      stashDetail = null;
+      stashDetailLoading = false;
+    }
     prInfoRequested = new Set<string>();
     // Preserve github-api sourced cache entries to avoid flickering on refresh
     for (const [hash, info] of prInfoCache) {
