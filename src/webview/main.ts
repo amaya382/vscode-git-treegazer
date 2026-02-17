@@ -1,6 +1,6 @@
 import { renderGraph, type GraphLane } from "./graphRenderer";
 import { COLORS, drawGraphRow } from "./graphDraw";
-import { formatDate, getRefIcon, groupRefs, isGroupedRef, type RefInfo, type ResolvedRef } from "./commitList";
+import { classifyRef, formatDate, getLocalBranchName, getRefIcon, groupRefs, isGroupedRef, type RefInfo, type ResolvedRef } from "./commitList";
 
 interface VsCodeApi {
   postMessage(msg: unknown): void;
@@ -962,6 +962,23 @@ function render(): void {
     }
   }
 
+  // Build branchColorMap: localBranchName → nodeColor (for consistent ref label colors)
+  const branchColorMap = new Map<string, string>();
+  for (let i = 0; i < commits.length; i++) {
+    const lanes = graphLanes[i] || [];
+    const nodeLane = lanes.find((l) => l.type === "node" || l.type === "start" || l.type === "end");
+    if (!nodeLane) continue;
+    const color = COLORS[nodeLane.colorIndex % COLORS.length];
+    for (const rawRef of commits[i].refs) {
+      const info = classifyRef(rawRef, remoteNames);
+      if (!info) continue;
+      const localName = getLocalBranchName(info, remoteNames);
+      if (localName && !branchColorMap.has(localName)) {
+        branchColorMap.set(localName, color);
+      }
+    }
+  }
+
   // Uncommitted changes row at the top (current worktree) — only when tip is at index 0
   if (uncommittedInfo?.hasChanges && currentBranchTipIndex === 0) {
     fragment.appendChild(buildUncommittedRow({
@@ -1032,7 +1049,7 @@ function render(): void {
     const stashBranchOutCols = stashEntriesAtI && stashEntriesAtI.length > 0 ? stashEntriesAtI.map((e) => e.stashCol) : undefined;
     // If there's an uncommitted row directly above this commit, the top half of the node line should be gray
     const hasUncommittedAbove = (i === 0 && uncommittedInfo?.hasChanges && currentBranchTipIndex === 0) || (isTopCommit && wtEntries && wtEntries.length > 0);
-    fragment.appendChild(buildCommitRow(commit, i, branchOutCols, hasUncommittedAbove, stashBranchOutCols));
+    fragment.appendChild(buildCommitRow(commit, i, branchOutCols, hasUncommittedAbove, stashBranchOutCols, branchColorMap));
 
     // Inline detail panel below selected commit
     if (commit.hash === selectedHash && !secondaryHash) {
@@ -1065,7 +1082,7 @@ function render(): void {
   requestPRInfoForVisibleCommits();
 }
 
-function buildCommitRow(commit: GitCommit, index: number, wtBranchOutCols?: number[], hasUncommittedAbove?: boolean, stashBranchOutCols?: number[]): HTMLElement {
+function buildCommitRow(commit: GitCommit, index: number, wtBranchOutCols?: number[], hasUncommittedAbove?: boolean, stashBranchOutCols?: number[], branchColorMap?: Map<string, string>): HTMLElement {
   const row = document.createElement("div");
   row.className = "commit-row";
   if (commit.hash === selectedHash) row.classList.add("selected");
@@ -1216,11 +1233,12 @@ function buildCommitRow(commit: GitCommit, index: number, wtBranchOutCols?: numb
         const icon = document.createElement("span");
         icon.className = "ref-icon";
         icon.innerHTML = getRefIcon(info.type);
-        if (nodeColor && info.type !== "tag") {
-          label.style.color = nodeColor;
-          label.style.borderColor = nodeColor;
+        const mappedColor = branchColorMap?.get(info.name) ?? nodeColor;
+        if (mappedColor && info.type !== "tag") {
+          label.style.color = mappedColor;
+          label.style.borderColor = mappedColor;
           if (info.type === "head") {
-            icon.style.background = nodeColor;
+            icon.style.background = mappedColor;
           }
         }
         label.appendChild(icon);
@@ -1274,11 +1292,13 @@ function buildCommitRow(commit: GitCommit, index: number, wtBranchOutCols?: numb
         const icon = document.createElement("span");
         icon.className = "ref-icon";
         icon.innerHTML = getRefIcon(info.type);
-        if (nodeColor && info.type !== "tag") {
-          label.style.color = nodeColor;
-          label.style.borderColor = nodeColor;
+        const localName = getLocalBranchName(info, remoteNames);
+        const mappedColor = (localName ? branchColorMap?.get(localName) : null) ?? nodeColor;
+        if (mappedColor && info.type !== "tag") {
+          label.style.color = mappedColor;
+          label.style.borderColor = mappedColor;
           if (info.type === "head") {
-            icon.style.background = nodeColor;
+            icon.style.background = mappedColor;
           }
         }
         label.appendChild(icon);
