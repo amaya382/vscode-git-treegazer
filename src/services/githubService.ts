@@ -53,7 +53,7 @@ export class GitHubService implements vscode.Disposable {
   private async ensureToken(): Promise<string | null> {
     if (this.tokenInitialized) return this.token;
     try {
-      const session = await vscode.authentication.getSession("github", [], {
+      const session = await vscode.authentication.getSession("github", ["repo"], {
         createIfNone: false,
       });
       this.token = session?.accessToken ?? null;
