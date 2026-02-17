@@ -16,32 +16,39 @@ export class WorktreeLifecycleService implements vscode.Disposable {
     );
   }
 
-  async checkMergedWorktrees(
+  async checkMergedBranches(
+    mergedBranches: string[],
     worktreeBranchNames: Set<string>,
     currentBranch: string,
     branchPRConfig: Map<string, PullRequestInfo>,
+    worktreeUncommitted: Record<string, { staged: number; unstaged: number; untracked: number }>,
   ): Promise<void> {
     const service = this.repoManager.getActiveService();
-    if (!service || !await service.isBtRepo()) return;
+    if (!service) return;
 
-    const defaultBranch = await service.btGetDefaultBranch();
-    if (!defaultBranch) return;
+    const isBt = await service.isBtRepo();
 
-    const mergedBranches = await service.getMergedBranches(defaultBranch);
-
-    for (const branchName of worktreeBranchNames) {
+    for (const branchName of mergedBranches) {
       if (branchName === currentBranch) continue;
-      if (branchName === defaultBranch) continue;
       if (this.notifiedBranches.has(branchName)) continue;
-      if (!mergedBranches.has(branchName)) continue;
+      if (worktreeUncommitted[branchName]) continue;
 
       const branchPR = branchPRConfig.get(branchName);
       this.notifiedBranches.add(branchName);
-      this.showCleanupNotification(service, branchName, branchPR?.number);
+
+      if (worktreeBranchNames.has(branchName)) {
+        if (isBt) {
+          this.showBtWorktreeCleanupNotification(service, branchName, branchPR?.number);
+        } else {
+          this.showWorktreeCleanupNotification(service, branchName, branchPR?.number);
+        }
+      } else {
+        this.showBranchCleanupNotification(service, branchName, branchPR?.number);
+      }
     }
   }
 
-  private async showCleanupNotification(
+  private async showBtWorktreeCleanupNotification(
     service: GitService,
     branch: string,
     prNumber?: number,
@@ -78,6 +85,81 @@ export class WorktreeLifecycleService implements vscode.Disposable {
     } catch (err) {
       vscode.window.showErrorMessage(
         `Failed to remove worktree: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
+  private async showWorktreeCleanupNotification(
+    service: GitService,
+    branch: string,
+    prNumber?: number,
+  ): Promise<void> {
+    const prLabel = prNumber ? `PR #${prNumber} for ` : "";
+    const action = await vscode.window.showInformationMessage(
+      `${prLabel}Worktree '${branch}' has been merged. Clean up the worktree?`,
+      "Remove Worktree & Branch",
+      "Remove Worktree Only",
+      "Dismiss",
+    );
+
+    if (!action || action === "Dismiss") return;
+
+    try {
+      const withBranch = action === "Remove Worktree & Branch";
+      const wtPath = this.repoManager.getWorktreePathForBranch(branch);
+      if (!wtPath) {
+        vscode.window.showErrorMessage(`Could not find worktree path for branch '${branch}'.`);
+        return;
+      }
+      try {
+        await service.removeWorktree(wtPath, false);
+      } catch (err) {
+        const forceConfirm = await vscode.window.showWarningMessage(
+          `Worktree '${branch}' has uncommitted changes. Force remove?`,
+          { modal: true },
+          "Force Remove",
+        );
+        if (forceConfirm !== "Force Remove") return;
+        await service.removeWorktree(wtPath, true);
+      }
+      if (withBranch) {
+        await service.deleteBranch(branch);
+      }
+      vscode.window.showInformationMessage(
+        `Worktree '${branch}' removed${withBranch ? " with branch" : ""}.`,
+      );
+      vscode.commands.executeCommand(COMMANDS.REFRESH_WORKTREES);
+      vscode.commands.executeCommand(COMMANDS.REFRESH_BRANCHES);
+      vscode.commands.executeCommand(COMMANDS.REFRESH_LOG);
+    } catch (err) {
+      vscode.window.showErrorMessage(
+        `Failed to remove worktree: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
+  private async showBranchCleanupNotification(
+    service: GitService,
+    branch: string,
+    prNumber?: number,
+  ): Promise<void> {
+    const prLabel = prNumber ? `PR #${prNumber} for ` : "";
+    const action = await vscode.window.showInformationMessage(
+      `${prLabel}Branch '${branch}' has been merged. Delete the branch?`,
+      "Delete Branch",
+      "Dismiss",
+    );
+
+    if (!action || action === "Dismiss") return;
+
+    try {
+      await service.deleteBranch(branch);
+      vscode.window.showInformationMessage(`Branch '${branch}' deleted.`);
+      vscode.commands.executeCommand(COMMANDS.REFRESH_BRANCHES);
+      vscode.commands.executeCommand(COMMANDS.REFRESH_LOG);
+    } catch (err) {
+      vscode.window.showErrorMessage(
+        `Failed to delete branch: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
   }

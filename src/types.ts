@@ -56,7 +56,6 @@ export interface WorktreeBranchEntry {
   path: string;
   isManaged?: boolean;
   isDefault?: boolean;
-  isMerged?: boolean;
 }
 
 export interface BaretreeWorktreeEntry {
@@ -265,6 +264,7 @@ export type ExtensionMessage =
         untracked: number;
       };
       worktreeUncommitted?: Record<string, { staged: number; unstaged: number; untracked: number }>;
+      mergedBranches?: string[];
       worktreeRebaseStates?: WorktreeRebaseState[];
       stashes?: GitStash[];
       baretreeAvailable?: boolean;

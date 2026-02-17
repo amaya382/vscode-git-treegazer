@@ -1473,6 +1473,18 @@ export class LogPanel implements vscode.WebviewViewProvider, vscode.Disposable {
       await this.repoManager.refreshWorktreeMetadata();
       const worktreeBranches = Object.fromEntries(await this.repoManager.getWorktreeBranchInfoExtended());
       const baretreeAvailable = await service.isBtRepo();
+
+      // Compute merged branches (works for both baretree and plain git repos)
+      let mergedBranches: string[] | undefined;
+      if (skip === 0) {
+        const defaultBranch = baretreeAvailable
+          ? await service.btGetDefaultBranch()
+          : await service.getDefaultBranch();
+        if (defaultBranch) {
+          mergedBranches = await service.getEffectiveMergedBranches(defaultBranch);
+        }
+      }
+
       const branchDivergence: Record<string, { ahead: number; behind: number }> = {};
       for (const b of branches) {
         if (!b.remote && b.tracking && (b.ahead || b.behind)) {
@@ -1524,12 +1536,12 @@ export class LogPanel implements vscode.WebviewViewProvider, vscode.Disposable {
         }
       }
 
-      this.postTo(webview, { type: "logData", commits, totalCount, currentBranch, remoteNames, worktreeBranches, branchDivergence, activeFilter: effectiveFilter, isReset: skip === 0, uncommittedChanges, worktreeUncommitted, worktreeRebaseStates, stashes: stashList.length > 0 ? stashList : undefined, baretreeAvailable: baretreeAvailable || undefined });
+      this.postTo(webview, { type: "logData", commits, totalCount, currentBranch, remoteNames, worktreeBranches, branchDivergence, activeFilter: effectiveFilter, isReset: skip === 0, uncommittedChanges, worktreeUncommitted, mergedBranches, worktreeRebaseStates, stashes: stashList.length > 0 ? stashList : undefined, baretreeAvailable: baretreeAvailable || undefined });
 
-      // Check for merged worktree branches (lifecycle notification)
-      if (skip === 0 && baretreeAvailable) {
+      // Check for merged branches (lifecycle notification)
+      if (skip === 0 && mergedBranches && mergedBranches.length > 0) {
         const wtBranchNames = new Set(Object.keys(worktreeBranches));
-        this.worktreeLifecycle.checkMergedWorktrees(wtBranchNames, currentBranch, branchPRConfig).catch(() => {});
+        this.worktreeLifecycle.checkMergedBranches(mergedBranches, wtBranchNames, currentBranch, branchPRConfig, worktreeUncommitted || {}).catch(() => {});
       }
     } catch (err) {
       this.postTo(webview, {

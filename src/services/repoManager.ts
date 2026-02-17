@@ -339,7 +339,7 @@ export class RepoManager implements vscode.Disposable {
     return info;
   }
 
-  async getWorktreeBranchInfoExtended(): Promise<Map<string, { name: string; path: string; isManaged?: boolean; isDefault?: boolean; isMerged?: boolean }>> {
+  async getWorktreeBranchInfoExtended(): Promise<Map<string, { name: string; path: string; isManaged?: boolean; isDefault?: boolean }>> {
     const baseInfo = this.getWorktreeBranchInfo();
     const service = this.getActiveService();
     if (!service || !await service.isBtRepo()) {
@@ -351,13 +351,9 @@ export class RepoManager implements vscode.Disposable {
       service.btGetDefaultBranch(),
     ]);
 
-    const mergedBranches = defaultBranch
-      ? await service.getMergedBranches(defaultBranch)
-      : new Set<string>();
-
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 
-    const result = new Map<string, { name: string; path: string; isManaged?: boolean; isDefault?: boolean; isMerged?: boolean }>();
+    const result = new Map<string, { name: string; path: string; isManaged?: boolean; isDefault?: boolean }>();
 
     // Start with base info from git worktree list
     for (const [branchName, info] of baseInfo) {
@@ -378,7 +374,6 @@ export class RepoManager implements vscode.Disposable {
         path: existing?.path ?? relativePath,
         isManaged: true,
         isDefault,
-        isMerged: !isDefault && mergedBranches.has(wt.branch),
       });
       this.btWorktreePathCache.set(wt.branch, wt.path);
     }
