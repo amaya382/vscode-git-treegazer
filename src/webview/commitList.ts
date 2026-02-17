@@ -61,6 +61,19 @@ export function getRefIcon(type: RefInfo["type"]): string {
   return REF_ICONS[type];
 }
 
+export function getLocalBranchName(ref: RefInfo, remoteNames: string[]): string | null {
+  if (ref.type === "tag") return null;
+  if (ref.type === "head" || ref.type === "branch") return ref.name;
+  if (ref.type === "remote") {
+    for (const remote of remoteNames) {
+      if (ref.name.startsWith(remote + "/")) {
+        return ref.name.substring(remote.length + 1);
+      }
+    }
+  }
+  return null;
+}
+
 export function groupRefs(rawRefs: string[], remoteNames: string[]): ResolvedRef[] {
   const classified = rawRefs
     .map((r) => classifyRef(r, remoteNames))
