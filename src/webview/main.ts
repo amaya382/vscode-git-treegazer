@@ -1239,7 +1239,7 @@ function buildCommitRow(commit: GitCommit, index: number, wtBranchOutCols?: numb
         label.appendChild(nameSpan);
         const wtInfo = worktreeBranches.get(info.name);
         if (wtInfo) {
-          if (wtInfo.isMerged) {
+          if (wtInfo.isMerged && !worktreeUncommitted[info.name]) {
             label.classList.add("ref-merged");
           }
           const wtIcon = document.createElement("span");
@@ -1307,7 +1307,7 @@ function buildCommitRow(commit: GitCommit, index: number, wtBranchOutCols?: numb
           }
           const wtInfo = worktreeBranches.get(info.name);
           if (wtInfo) {
-            if (wtInfo.isMerged) {
+            if (wtInfo.isMerged && !worktreeUncommitted[info.name]) {
               label.classList.add("ref-merged");
             }
             const wtIcon = document.createElement("span");
