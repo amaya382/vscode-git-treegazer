@@ -1,6 +1,11 @@
 <h1 align="center"><img src="media/icon.png" alt="Git Treegazer" width="48" /> Git Treegazer</h1>
 
 <p align="center">
+  <a href="https://marketplace.visualstudio.com/items?itemName=amaya382.git-treegazer"><img src="https://img.shields.io/visual-studio-marketplace/v/amaya382.git-treegazer" alt="VS Marketplace Version"></a>
+  <a href="https://github.com/amaya382/vscode-git-treegazer/blob/main/LICENSE"><img src="https://img.shields.io/github/license/amaya382/vscode-git-treegazer" alt="License"></a>
+</p>
+
+<p align="center">
   <strong>Observe your Git repository from the treetop.</strong><br/>
   A VSCode extension for visualizing git log graphs and performing git operations with a compact, information-dense UI — with first-class worktree support.
 </p>
