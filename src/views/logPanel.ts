@@ -2891,6 +2891,8 @@ export class LogPanel implements vscode.WebviewViewProvider, vscode.Disposable {
       <div class="filter-group">
         <input type="checkbox" id="mergesOnlyToggle" title="Show merge commits only">
         <label class="filter-checkbox-label" for="mergesOnlyToggle">Merges only</label>
+        <input type="checkbox" id="hideRemotesToggle" title="Hide remote branch refs">
+        <label class="filter-checkbox-label" for="hideRemotesToggle">Hide remotes</label>
       </div>
       <button class="filter-clear-btn" id="clearFiltersBtn" title="Clear all filters" style="display:none;">
         <span class="codicon codicon-close" style="font-size:12px"></span> Clear
