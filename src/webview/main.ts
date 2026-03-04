@@ -123,6 +123,7 @@ let uncommittedInfo: UncommittedInfo | null = null;
 let uncommittedDetail: UncommittedDetail | null = null;
 let uncommittedDetailLoading = false;
 let uncommittedDetailBranch: string | undefined = undefined;
+let tagDiffData: { tag: string; previousTag: string | null; hash: string; commits: MergedCommitSummary[]; prNumbers: number[] } | null = null;
 
 const STASH_HASH_PREFIX = "__stash__";
 
@@ -561,6 +562,10 @@ window.addEventListener("message", (event) => {
       break;
     case "rebaseComplete":
       handleRebaseComplete(msg);
+      break;
+    case "tagDiff":
+      tagDiffData = { tag: msg.tag, previousTag: msg.previousTag, hash: msg.hash, commits: msg.commits, prNumbers: msg.prNumbers };
+      render();
       break;
   }
 });
@@ -2332,6 +2337,71 @@ function buildDetailPanel(commit: GitCommit): HTMLElement {
     left.appendChild(mergedSection);
   }
 
+  // Tag diff section (changes since previous tag)
+  if (tagDiffData && tagDiffData.hash === commit.hash) {
+    const tagSection = document.createElement("div");
+    tagSection.className = "detail-merged-commits";
+
+    const tagHeader = document.createElement("div");
+    tagHeader.className = "detail-merged-header";
+    tagHeader.textContent = tagDiffData.previousTag
+      ? `Changes since ${tagDiffData.previousTag}`
+      : `All changes in ${tagDiffData.tag}`;
+    tagSection.appendChild(tagHeader);
+
+    if (tagDiffData.prNumbers.length > 0) {
+      const prRow = document.createElement("div");
+      prRow.style.padding = "2px 8px";
+      prRow.style.opacity = "0.8";
+      const prLinks = tagDiffData.prNumbers.map((num) => {
+        const cached = prInfoCache.get(`#${num}`);
+        const title = cached?.title ? ` ${cached.title}` : "";
+        return `<a class="pr-link" data-url="" style="cursor:default">#${num}${escapeHtml(title)}</a>`;
+      });
+      prRow.innerHTML = "PRs: " + prLinks.join(", ");
+      tagSection.appendChild(prRow);
+    }
+
+    for (const tc of tagDiffData.commits) {
+      const row = document.createElement("div");
+      row.className = "detail-merged-row";
+
+      const hashEl = document.createElement("span");
+      hashEl.className = "detail-merged-hash";
+      hashEl.textContent = tc.abbreviatedHash;
+
+      const msgEl = document.createElement("span");
+      msgEl.className = "detail-merged-msg";
+      msgEl.textContent = tc.message;
+      msgEl.title = tc.message;
+
+      const authorEl = document.createElement("span");
+      authorEl.className = "detail-merged-author";
+      authorEl.textContent = tc.author;
+
+      row.appendChild(hashEl);
+      row.appendChild(msgEl);
+      row.appendChild(authorEl);
+
+      row.addEventListener("click", (e) => {
+        e.stopPropagation();
+        selectedHash = tc.hash;
+        secondaryHash = null;
+        expandedDetail = null;
+        detailLoading = true;
+        tagDiffData = null;
+        vscode.postMessage({ type: "requestCommitDetail", hash: tc.hash });
+        vscode.postMessage({ type: "requestCommitContainment", hash: tc.hash });
+        render();
+        updateFilterUI();
+      });
+
+      tagSection.appendChild(row);
+    }
+
+    left.appendChild(tagSection);
+  }
+
   // --- Right side: changed files ---
   const right = document.createElement("div");
   right.className = "detail-right";
@@ -2553,6 +2623,7 @@ function handleCommitClick(hash: string, e: MouseEvent): void {
     expandedDetail = null;
     detailLoading = false;
     containmentInfo = null;
+    tagDiffData = null;
   } else {
     // Expand new commit
     selectedHash = hash;
@@ -2561,8 +2632,21 @@ function handleCommitClick(hash: string, e: MouseEvent): void {
     detailLoading = true;
     compareDetailData = null;
     compareLoading = false;
+    tagDiffData = null;
     vscode.postMessage({ type: "requestCommitDetail", hash });
     vscode.postMessage({ type: "requestCommitContainment", hash });
+
+    // If commit has a tag ref, request tag diff
+    const commit = commits.find((c) => c.hash === hash);
+    if (commit) {
+      for (const ref of commit.refs) {
+        if (ref.startsWith("tag: ")) {
+          const tag = ref.substring(5);
+          vscode.postMessage({ type: "requestTagDiff", tag, hash });
+          break;
+        }
+      }
+    }
   }
   render();
   updateFilterUI();

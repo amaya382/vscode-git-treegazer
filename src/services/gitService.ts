@@ -480,6 +480,107 @@ export class GitService {
     }
   }
 
+  async getAllTagsWithHashes(): Promise<{ tag: string; hash: string }[]> {
+    try {
+      const raw = await this.git.raw(["tag", "-l", "--format=%(refname:short) %(objectname)"]);
+      if (!raw.trim()) return [];
+      return raw.trim().split("\n").filter(Boolean).map((line) => {
+        const spaceIdx = line.indexOf(" ");
+        return { tag: line.substring(0, spaceIdx), hash: line.substring(spaceIdx + 1) };
+      });
+    } catch {
+      return [];
+    }
+  }
+
+  async getCommitsBetweenRefs(from: string, to: string): Promise<MergedCommitSummary[]> {
+    try {
+      const format = ["%H", "%h", "%s", "%an", "%aI"].join(FIELD_SEPARATOR);
+      const raw = await this.git.raw([
+        "log",
+        `--format=${format}${LOG_SEPARATOR}`,
+        `${from}..${to}`,
+      ]);
+      if (!raw.trim()) return [];
+      return raw
+        .split(LOG_SEPARATOR)
+        .filter((s) => s.trim())
+        .map((entry) => {
+          const fields = entry.trim().split(FIELD_SEPARATOR);
+          return {
+            hash: fields[0],
+            abbreviatedHash: fields[1],
+            message: fields[2],
+            author: fields[3],
+            date: fields[4],
+          };
+        });
+    } catch {
+      return [];
+    }
+  }
+
+  async getCommitsUpToRef(ref: string): Promise<MergedCommitSummary[]> {
+    try {
+      const format = ["%H", "%h", "%s", "%an", "%aI"].join(FIELD_SEPARATOR);
+      const raw = await this.git.raw([
+        "log",
+        `--format=${format}${LOG_SEPARATOR}`,
+        ref,
+      ]);
+      if (!raw.trim()) return [];
+      return raw
+        .split(LOG_SEPARATOR)
+        .filter((s) => s.trim())
+        .map((entry) => {
+          const fields = entry.trim().split(FIELD_SEPARATOR);
+          return {
+            hash: fields[0],
+            abbreviatedHash: fields[1],
+            message: fields[2],
+            author: fields[3],
+            date: fields[4],
+          };
+        });
+    } catch {
+      return [];
+    }
+  }
+
+  getPreviousSemverTag(currentTag: string, allTags: { tag: string; hash: string }[]): string | null {
+    const semverPattern = /^v?(\d+)\.(\d+)\.(\d+)(-.*)?$/;
+    const currentMatch = currentTag.match(semverPattern);
+    if (!currentMatch || currentMatch[4]) return null; // not semver or is pre-release
+
+    const parseSemver = (tag: string) => {
+      const m = tag.match(semverPattern);
+      if (!m || m[4]) return null; // skip pre-release
+      return { major: parseInt(m[1]), minor: parseInt(m[2]), patch: parseInt(m[3]) };
+    };
+
+    const currentVer = parseSemver(currentTag)!;
+    let best: { tag: string; ver: { major: number; minor: number; patch: number } } | null = null;
+
+    for (const { tag } of allTags) {
+      if (tag === currentTag) continue;
+      const ver = parseSemver(tag);
+      if (!ver) continue;
+      // Must be less than current
+      const cmp = (ver.major - currentVer.major) * 1000000 + (ver.minor - currentVer.minor) * 1000 + (ver.patch - currentVer.patch);
+      if (cmp >= 0) continue;
+      if (!best) {
+        best = { tag, ver };
+      } else {
+        const bestCmp = (ver.major - best.ver.major) * 1000000 + (ver.minor - best.ver.minor) * 1000 + (ver.patch - best.ver.patch);
+        if (bestCmp > 0) {
+          best = { tag, ver };
+        }
+      }
+    }
+
+    return best ? best.tag : null;
+  }
+
   async getDiffBetween(hash1: string, hash2: string): Promise<DiffFile[]> {
     const raw = await this.git.raw(["diff", "--numstat", "-M", hash1, hash2]);
     return this.parseDiffStat(raw);

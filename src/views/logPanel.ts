@@ -494,6 +494,10 @@ export class LogPanel implements vscode.WebviewViewProvider, vscode.Disposable {
       case "worktreeRebaseSkip":
         await this.handleWorktreeRebaseAction(source, msg.branch, msg.worktreePath, "skip");
         break;
+
+      case "requestTagDiff":
+        await this.sendTagDiff(source, msg.tag, msg.hash);
+        break;
     }
   }
 
@@ -545,6 +549,46 @@ export class LogPanel implements vscode.WebviewViewProvider, vscode.Disposable {
         files,
         mergedCommits,
         prInfo: commit?.prInfo,
+      });
+    } catch (err) {
+      this.postTo(webview, {
+        type: "error",
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  private async sendTagDiff(webview: vscode.Webview, tag: string, hash: string): Promise<void> {
+    const service = this.repoManager.getActiveService();
+    if (!service) return;
+
+    try {
+      const allTags = await service.getAllTagsWithHashes();
+      const previousTag = service.getPreviousSemverTag(tag, allTags);
+
+      const commits = previousTag
+        ? await service.getCommitsBetweenRefs(previousTag, tag)
+        : await service.getCommitsUpToRef(tag);
+
+      const prNumbers: number[] = [];
+      const prPattern = /#(\d+)/g;
+      for (const c of commits) {
+        let match;
+        while ((match = prPattern.exec(c.message)) !== null) {
+          const num = parseInt(match[1]);
+          if (!prNumbers.includes(num)) {
+            prNumbers.push(num);
+          }
+        }
+      }
+
+      this.postTo(webview, {
+        type: "tagDiff",
+        tag,
+        previousTag,
+        hash,
+        commits,
+        prNumbers,
       });
     } catch (err) {
       this.postTo(webview, {
