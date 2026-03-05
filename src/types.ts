@@ -243,7 +243,8 @@ export type WebviewMessage =
   | { type: "inlineRebaseSkip" }
   | { type: "worktreeRebaseContinue"; branch: string; worktreePath: string }
   | { type: "worktreeRebaseAbort"; branch: string; worktreePath: string }
-  | { type: "worktreeRebaseSkip"; branch: string; worktreePath: string };
+  | { type: "worktreeRebaseSkip"; branch: string; worktreePath: string }
+  | { type: "requestTagDiff"; tag: string; hash: string };
 
 // Extension → Webview messages
 export type ExtensionMessage =
@@ -317,4 +318,12 @@ export type ExtensionMessage =
   | { type: "rebaseModeData"; entries: RebaseTodoEntry[]; currentBranch: string; ontoRef: string; targetHashes: string[] }
   | { type: "rebaseModeExited" }
   | { type: "rebaseProgress"; state: RebaseState }
-  | { type: "rebaseComplete"; success: boolean; message: string };
+  | { type: "rebaseComplete"; success: boolean; message: string }
+  | {
+      type: "tagDiff";
+      tag: string;
+      previousTag: string | null;
+      hash: string;
+      commits: MergedCommitSummary[];
+      prNumbers: number[];
+    };
