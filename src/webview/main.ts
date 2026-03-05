@@ -169,6 +169,7 @@ let branchDivergence: Record<string, { ahead: number; behind: number }> = {};
 let worktreeUncommitted: Record<string, { staged: number; unstaged: number; untracked: number }> = {};
 let mergedBranches: Set<string> = new Set();
 let worktreeRebaseStates: Map<string, { worktreePath: string; currentStep?: number; totalSteps?: number; hasConflicts: boolean }> = new Map();
+let hideRemotes = false;
 
 interface GitConfigEntry {
   key: string;
@@ -347,6 +348,7 @@ repoSelect.addEventListener("change", () => {
 });
 
 const mergesOnlyToggle = document.getElementById("mergesOnlyToggle") as HTMLInputElement;
+const hideRemotesToggle = document.getElementById("hideRemotesToggle") as HTMLInputElement;
 const containmentFilterChip = document.getElementById("containmentFilterChip")!;
 
 mergesOnlyToggle.addEventListener("change", () => {
@@ -354,6 +356,11 @@ mergesOnlyToggle.addEventListener("change", () => {
   commits = [];
   vscode.postMessage({ type: "setFilter", filter: activeFilter });
   updateFilterUI();
+});
+
+hideRemotesToggle.addEventListener("change", () => {
+  hideRemotes = hideRemotesToggle.checked;
+  render();
 });
 
 // --- Text filter inputs ---
@@ -1258,10 +1265,12 @@ function buildCommitRow(commit: GitCommit, index: number, wtBranchOutCols?: numb
         }
         label.appendChild(icon);
         // Add cloud icon for paired remote
-        const remoteIcon = document.createElement("span");
-        remoteIcon.className = "ref-icon";
-        remoteIcon.innerHTML = getRefIcon("remote");
-        label.appendChild(remoteIcon);
+        if (!hideRemotes) {
+          const remoteIcon = document.createElement("span");
+          remoteIcon.className = "ref-icon";
+          remoteIcon.innerHTML = getRefIcon("remote");
+          label.appendChild(remoteIcon);
+        }
         const nameSpan = document.createElement("span");
         nameSpan.className = "ref-name";
         const displayName = layoutOptions.abbreviateRefPrefixes > 0
@@ -1306,6 +1315,7 @@ function buildCommitRow(commit: GitCommit, index: number, wtBranchOutCols?: numb
       } else {
         // Standalone ref (unpaired remote, tag, bare HEAD)
         const info = entry;
+        if (hideRemotes && info.type === "remote") continue;
         const label = document.createElement("span");
         label.className = `ref-label ref-${info.type}`;
         const icon = document.createElement("span");
