@@ -202,6 +202,7 @@ export type WebviewMessage =
   | { type: "setLayoutOption"; key: keyof LayoutOptions; value: LayoutOptions[keyof LayoutOptions] }
   | { type: "ready" }
   | { type: "requestPRInfo"; hashes: string[] }
+  | { type: "requestPRInfoByNumbers"; prNumbers: number[]; hashes: string[] }
   | { type: "openUrl"; url: string }
   | { type: "requestGitConfig" }
   | { type: "editGitConfig"; key: string; value: string; scope: GitConfigScope }
@@ -326,4 +327,5 @@ export type ExtensionMessage =
       hash: string;
       commits: MergedCommitSummary[];
       prNumbers: number[];
+      prInfos: Record<number, PullRequestInfo>;
     };

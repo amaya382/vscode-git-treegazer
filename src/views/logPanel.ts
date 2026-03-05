@@ -314,6 +314,10 @@ export class LogPanel implements vscode.WebviewViewProvider, vscode.Disposable {
         this.handleRequestPRInfo(source, msg.hashes);
         break;
 
+      case "requestPRInfoByNumbers":
+        this.handleRequestPRInfoByNumbers(source, msg.prNumbers, msg.hashes);
+        break;
+
       case "openUrl":
         vscode.env.openExternal(vscode.Uri.parse(msg.url));
         break;
@@ -525,6 +529,30 @@ export class LogPanel implements vscode.WebviewViewProvider, vscode.Disposable {
     }
   }
 
+  private async handleRequestPRInfoByNumbers(webview: vscode.Webview, prNumbers: number[], hashes: string[]): Promise<void> {
+    try {
+      const prInfos = await this.githubService.getPRInfoByNumbers(prNumbers);
+      // Map PR info back to commit hashes
+      const data: Record<string, PullRequestInfo | null> = {};
+      for (const hash of hashes) {
+        const pr = this.lastSentCommits.get(hash);
+        if (pr) {
+          const enriched = prInfos[pr.number];
+          if (enriched) {
+            // Preserve sourceBranch from pattern if API didn't return one
+            if (!enriched.sourceBranch && pr.sourceBranch) {
+              enriched.sourceBranch = pr.sourceBranch;
+            }
+            data[hash] = enriched;
+          }
+        }
+      }
+      this.postTo(webview, { type: "prInfo", data });
+    } catch {
+      // Silently fail — PR info is supplementary
+    }
+  }
+
   private async sendCommitDetail(webview: vscode.Webview, hash: string): Promise<void> {
     const service = this.repoManager.getActiveService();
     if (!service) return;
@@ -582,6 +610,10 @@ export class LogPanel implements vscode.WebviewViewProvider, vscode.Disposable {
         }
       }
 
+      const prInfos = prNumbers.length > 0
+        ? await this.githubService.getPRInfoByNumbers(prNumbers)
+        : {};
+
       this.postTo(webview, {
         type: "tagDiff",
         tag,
@@ -589,6 +621,7 @@ export class LogPanel implements vscode.WebviewViewProvider, vscode.Disposable {
         hash,
         commits,
         prNumbers,
+        prInfos,
       });
     } catch (err) {
       this.postTo(webview, {
