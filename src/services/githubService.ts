@@ -13,6 +13,7 @@ interface GitHubPR {
 
 export class GitHubService implements vscode.Disposable {
   private cache = new Map<string, PullRequestInfo | null>();
+  private prNumberCache = new Map<number, PullRequestInfo | null>();
   private pendingRequests = new Map<string, Promise<PullRequestInfo | null>>();
   private repoInfo: { owner: string; repo: string } | null | undefined;
   private cachedRepoPath: string | undefined;
@@ -32,6 +33,7 @@ export class GitHubService implements vscode.Disposable {
       }),
       repoManager.onDidChangeActiveRepo(() => {
         this.cache.clear();
+        this.prNumberCache.clear();
         this.repoInfo = undefined;
         this.cachedRepoPath = undefined;
       }),
@@ -237,6 +239,13 @@ export class GitHubService implements vscode.Disposable {
       if (result) return result;
     }
 
+    // Fallback: if pattern matched a PR number but SHA/branch lookup failed,
+    // fetch PR directly by number to get title and other details
+    if (patternInfo && patternInfo.number) {
+      const result = await this.fetchPRByNumber(owner, repo, patternInfo.number, headers, patternInfo);
+      if (result) return result;
+    }
+
     // API searched but PR not found — return null so pending labels are cleared
     return null;
   }
@@ -287,8 +296,102 @@ export class GitHubService implements vscode.Disposable {
     return null;
   }
 
+  private async fetchPRByNumber(
+    owner: string,
+    repo: string,
+    prNumber: number,
+    headers: Record<string, string>,
+    patternInfo?: PullRequestInfo,
+  ): Promise<PullRequestInfo | null> {
+    if (this.prNumberCache.has(prNumber)) {
+      return this.prNumberCache.get(prNumber)!;
+    }
+    if (this.rateLimitedUntil && Date.now() < this.rateLimitedUntil) {
+      return patternInfo ?? null;
+    }
+    try {
+      const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${prNumber}`;
+      const response = await fetch(url, { headers });
+      if (response.status === 403 || response.status === 429) {
+        this.rateLimitedUntil = Date.now() + 60_000;
+        this.notifyRateLimit();
+        return patternInfo ?? null;
+      }
+      if (!response.ok) return patternInfo ?? null;
+      const pr = (await response.json()) as GitHubPR & { head?: { ref?: string } };
+      const state: PullRequestInfo["state"] = pr.merged_at
+        ? "merged"
+        : pr.state === "closed"
+          ? "closed"
+          : pr.draft
+            ? "draft"
+            : "open";
+      const info: PullRequestInfo = {
+        number: pr.number,
+        title: pr.title,
+        url: pr.html_url,
+        state,
+        source: "github-api",
+        sourceBranch: pr.head?.ref ?? patternInfo?.sourceBranch,
+      };
+      this.prNumberCache.set(prNumber, info);
+      return info;
+    } catch {
+      return patternInfo ?? null;
+    }
+  }
+
+  async getPRInfoByNumbers(
+    prNumbers: number[],
+  ): Promise<Record<number, PullRequestInfo>> {
+    const result: Record<number, PullRequestInfo> = {};
+    const repo = await this.ensureRepoInfo();
+    if (!repo) return result;
+
+    const token = await this.ensureToken();
+
+    const headers: Record<string, string> = {
+      "Accept": "application/vnd.github.v3+json",
+      "User-Agent": "git-treegazer",
+    };
+    if (token) {
+      headers["Authorization"] = `token ${token}`;
+    }
+
+    const batchSize = 5;
+    for (let i = 0; i < prNumbers.length; i += batchSize) {
+      const batch = prNumbers.slice(i, i + batchSize);
+      const promises = batch.map((num) =>
+        this.fetchPRByNumber(repo.owner, repo.repo, num, headers),
+      );
+      const results = await Promise.all(promises);
+      for (let j = 0; j < batch.length; j++) {
+        if (results[j]) {
+          result[batch[j]] = results[j]!;
+        }
+      }
+    }
+
+    // Fill in URLs for any that don't have them
+    for (const num of prNumbers) {
+      if (result[num] && !result[num].url) {
+        result[num].url = `https://github.com/${repo.owner}/${repo.repo}/pull/${num}`;
+      } else if (!result[num]) {
+        // Provide fallback with at least the URL
+        result[num] = {
+          number: num,
+          url: `https://github.com/${repo.owner}/${repo.repo}/pull/${num}`,
+          source: "pattern",
+        };
+      }
+    }
+
+    return result;
+  }
+
   clearCache(): void {
     this.cache.clear();
+    this.prNumberCache.clear();
   }
 
   dispose(): void {

@@ -123,7 +123,7 @@ let uncommittedInfo: UncommittedInfo | null = null;
 let uncommittedDetail: UncommittedDetail | null = null;
 let uncommittedDetailLoading = false;
 let uncommittedDetailBranch: string | undefined = undefined;
-let tagDiffData: { tag: string; previousTag: string | null; hash: string; commits: MergedCommitSummary[]; prNumbers: number[] } | null = null;
+let tagDiffData: { tag: string; previousTag: string | null; hash: string; commits: MergedCommitSummary[]; prNumbers: number[]; prInfos: Record<number, PullRequestInfo> } | null = null;
 
 const STASH_HASH_PREFIX = "__stash__";
 
@@ -573,7 +573,7 @@ window.addEventListener("message", (event) => {
       handleRebaseComplete(msg);
       break;
     case "tagDiff":
-      tagDiffData = { tag: msg.tag, previousTag: msg.previousTag, hash: msg.hash, commits: msg.commits, prNumbers: msg.prNumbers };
+      tagDiffData = { tag: msg.tag, previousTag: msg.previousTag, hash: msg.hash, commits: msg.commits, prNumbers: msg.prNumbers, prInfos: msg.prInfos };
       render();
       break;
   }
@@ -689,6 +689,7 @@ function handleLogData(data: { commits: GitCommit[]; totalCount: number; current
       stashDetailLoading = false;
     }
     prInfoRequested = new Set<string>();
+    prEnrichRequested.clear();
     // Preserve github-api sourced cache entries to avoid flickering on refresh
     for (const [hash, info] of prInfoCache) {
       if (!info || info.source !== "github-api") {
@@ -1431,6 +1432,22 @@ function buildCommitRow(commit: GitCommit, index: number, wtBranchOutCols?: numb
         e.stopPropagation();
         vscode.postMessage({ type: "openUrl", url: prInfo.url! });
       });
+    }
+    // Lazily fetch enriched PR info (title, sourceBranch) on hover
+    if (!prInfo.title && prInfo.source === "pattern") {
+      prLabel.addEventListener("mouseenter", () => {
+        // Check if enriched info has arrived since render
+        const enriched = prInfoCache.get(commit.hash);
+        if (enriched && enriched.title) {
+          const parts: string[] = [`Pull Request #${enriched.number}`];
+          if (enriched.title) parts.push(enriched.title);
+          if (enriched.sourceBranch) parts.push(`from ${enriched.sourceBranch}`);
+          if (enriched.state) parts.push(`(${enriched.state})`);
+          prLabel.title = parts.join(" \u2014 ");
+        } else {
+          requestPREnrichOnHover(prInfo.number, commit.hash);
+        }
+      }, { once: true });
     }
     msgCell.appendChild(prLabel);
   }
@@ -2379,13 +2396,34 @@ function buildDetailPanel(commit: GitCommit): HTMLElement {
     if (tagDiffData.prNumbers.length > 0) {
       const prRow = document.createElement("div");
       prRow.style.padding = "2px 8px";
-      prRow.style.opacity = "0.8";
-      const prLinks = tagDiffData.prNumbers.map((num) => {
-        const cached = prInfoCache.get(`#${num}`);
-        const title = cached?.title ? ` ${cached.title}` : "";
-        return `<a class="pr-link" data-url="" style="cursor:default">#${num}${escapeHtml(title)}</a>`;
-      });
-      prRow.innerHTML = "PRs: " + prLinks.join(", ");
+      prRow.style.display = "flex";
+      prRow.style.flexWrap = "wrap";
+      prRow.style.alignItems = "center";
+      prRow.style.gap = "4px";
+      const prLabel = document.createElement("span");
+      prLabel.textContent = "PRs:";
+      prLabel.style.opacity = "0.8";
+      prRow.appendChild(prLabel);
+      for (const num of tagDiffData.prNumbers) {
+        const info = tagDiffData.prInfos[num];
+        const state = info?.state || "merged";
+        const badge = document.createElement("span");
+        badge.className = "pr-label pr-" + state + (info?.url ? " has-url" : "");
+        badge.innerHTML = `${PR_ICONS[state]}<span class="pr-number">#${num}</span>`;
+        const tooltipParts: string[] = [`Pull Request #${num}`];
+        if (info?.title) tooltipParts.push(info.title);
+        if (info?.sourceBranch) tooltipParts.push(`from ${info.sourceBranch}`);
+        if (info?.state) tooltipParts.push(`(${info.state})`);
+        badge.title = tooltipParts.join(" \u2014 ");
+        if (info?.url) {
+          badge.style.cursor = "pointer";
+          badge.addEventListener("click", (e) => {
+            e.stopPropagation();
+            vscode.postMessage({ type: "openUrl", url: info.url! });
+          });
+        }
+        prRow.appendChild(badge);
+      }
       tagSection.appendChild(prRow);
     }
 
@@ -3450,6 +3488,14 @@ function requestPRInfoForVisibleCommits(): void {
     }
     vscode.postMessage({ type: "requestPRInfo", hashes: hashesToFetch });
   }
+}
+
+// Lazily enrich pattern-matched PR info on hover
+const prEnrichRequested = new Set<number>();
+function requestPREnrichOnHover(prNumber: number, hash: string): void {
+  if (prEnrichRequested.has(prNumber)) return;
+  prEnrichRequested.add(prNumber);
+  vscode.postMessage({ type: "requestPRInfoByNumbers", prNumbers: [prNumber], hashes: [hash] });
 }
 
 // --- Git Config in layout options menu ---
