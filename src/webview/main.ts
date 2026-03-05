@@ -151,6 +151,7 @@ let compareLoading = false;
 
 let currentBranch = "";
 let baretreeAvailable = false;
+let pendingRepoSwitch = false;
 
 const PR_ICONS: Record<string, string> = {
   open: codicon("git-pull-request", 12),
@@ -344,6 +345,7 @@ refreshBtn.addEventListener("click", () => {
 });
 
 repoSelect.addEventListener("change", () => {
+  pendingRepoSwitch = true;
   vscode.postMessage({ type: "selectRepo", path: repoSelect.value });
 });
 
@@ -715,6 +717,21 @@ function handleLogData(data: { commits: GitCommit[]; totalCount: number; current
 
   graphLanes = renderGraph(commits);
   render();
+
+  if (data.isReset && pendingRepoSwitch) {
+    pendingRepoSwitch = false;
+    if (currentBranch) {
+      const tipCommit = commits.find((c) =>
+        c.refs.some((ref) => ref.replace(/^HEAD -> /, "") === currentBranch)
+      );
+      if (tipCommit) {
+        const row = content.querySelector(`.commit-row[data-hash="${tipCommit.hash}"]`);
+        if (row) {
+          row.scrollIntoView({ block: "center" });
+        }
+      }
+    }
+  }
 }
 
 function handleRepoList(data: { repos: { name: string; path: string; group?: string; branch?: string }[]; activeRepo: string }): void {
