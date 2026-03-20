@@ -690,9 +690,19 @@ function handleLogData(data: { commits: GitCommit[]; totalCount: number; current
     }
     prInfoRequested = new Set<string>();
     prEnrichRequested.clear();
-    // Preserve github-api sourced cache entries to avoid flickering on refresh
+    // Preserve github-api sourced cache entries to avoid flickering on refresh,
+    // but only for commits that are still branch tips or have pattern-matched prInfo.
+    // This prevents stale PR labels from appearing on former branch-tip commits after new pushes.
+    const newBranchTips = new Set<string>();
+    const newPatternMatched = new Set<string>();
+    for (const c of data.commits) {
+      if (c.isBranchTip) newBranchTips.add(c.hash);
+      if (c.prInfo) newPatternMatched.add(c.hash);
+    }
     for (const [hash, info] of prInfoCache) {
       if (!info || info.source !== "github-api") {
+        prInfoCache.delete(hash);
+      } else if (!newBranchTips.has(hash) && !newPatternMatched.has(hash)) {
         prInfoCache.delete(hash);
       }
     }
@@ -1413,9 +1423,14 @@ function buildCommitRow(commit: GitCommit, index: number, wtBranchOutCols?: numb
     msgCell.appendChild(refsSpan);
   }
 
-  // PR badge — on non-merge branch tips, hide merged/closed (those are shown on the merge commit itself)
+  // PR badge — show only on pattern-matched commits (merge/squash) and branch tips with API-resolved PR info.
+  // On non-merge branch tips, hide merged/closed PRs (those are shown on the merge commit itself).
   const cachedPR = prInfoCache.get(commit.hash);
-  const prInfo = cachedPR !== undefined ? (cachedPR ?? undefined) : commit.prInfo;
+  // Only use cached PR info for commits that are branch tips or already have pattern-matched prInfo.
+  // This prevents stale cache entries from showing PR labels on former branch-tip commits after new pushes.
+  const prInfo = commit.prInfo
+    ? (cachedPR !== undefined ? (cachedPR ?? undefined) : commit.prInfo)
+    : (commit.isBranchTip && cachedPR ? cachedPR : undefined);
   const prState = prInfo ? (prInfo.state || "open") : undefined;
   const hideBranchTipPR = commit.isBranchTip && !commit.isMergeCommit && (prState === "merged" || prState === "closed");
   if (prInfo && !hideBranchTipPR) {
