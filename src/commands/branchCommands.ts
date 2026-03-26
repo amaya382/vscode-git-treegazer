@@ -74,23 +74,78 @@ export function registerBranchCommands(
           branchName = picked.label;
         }
 
-        const confirm = await vscode.window.showWarningMessage(
-          `Delete branch '${branchName}'?`,
-          { modal: true },
-          "Delete",
-          "Force Delete",
-        );
-
-        if (!confirm) return;
-
-        try {
-          await service.deleteBranch(branchName, confirm === "Force Delete");
-          vscode.window.showInformationMessage(`Branch '${branchName}' deleted.`);
-          onRefresh();
-        } catch (err) {
-          vscode.window.showErrorMessage(
-            `Failed to delete branch: ${err instanceof Error ? err.message : err}`,
+        // Check if this branch has an associated worktree
+        const wtPath = repoManager.getWorktreePathForBranch(branchName);
+        if (wtPath) {
+          const isBt = await service.isBtRepo();
+          const confirm = await vscode.window.showWarningMessage(
+            `Branch '${branchName}' has a worktree. Delete the branch and remove the worktree?`,
+            { modal: true },
+            "Remove Worktree & Delete Branch",
+            "Delete Branch Only",
           );
+          if (!confirm) return;
+
+          try {
+            if (confirm === "Remove Worktree & Delete Branch") {
+              if (isBt) {
+                try {
+                  await service.btRemoveWorktree(branchName, true, false);
+                } catch {
+                  const forceConfirm = await vscode.window.showWarningMessage(
+                    `Worktree '${branchName}' has uncommitted changes. Force remove?`,
+                    { modal: true },
+                    "Force Remove",
+                  );
+                  if (forceConfirm !== "Force Remove") return;
+                  await service.btRemoveWorktree(branchName, true, true);
+                }
+              } else {
+                try {
+                  await service.removeWorktree(wtPath, false);
+                } catch {
+                  const forceConfirm = await vscode.window.showWarningMessage(
+                    `Worktree '${branchName}' has uncommitted changes. Force remove?`,
+                    { modal: true },
+                    "Force Remove",
+                  );
+                  if (forceConfirm !== "Force Remove") return;
+                  await service.removeWorktree(wtPath, true);
+                }
+                await service.deleteBranch(branchName);
+              }
+              vscode.window.showInformationMessage(
+                `Worktree and branch '${branchName}' removed.`,
+              );
+            } else {
+              await service.deleteBranch(branchName);
+              vscode.window.showInformationMessage(`Branch '${branchName}' deleted.`);
+            }
+            onRefresh();
+          } catch (err) {
+            vscode.window.showErrorMessage(
+              `Failed to delete branch: ${err instanceof Error ? err.message : err}`,
+            );
+          }
+        } else {
+          const confirm = await vscode.window.showWarningMessage(
+            `Delete branch '${branchName}'?`,
+            { modal: true },
+            "Delete",
+            "Force Delete",
+          );
+
+          if (!confirm) return;
+
+          try {
+            await service.deleteBranch(branchName, confirm === "Force Delete");
+            vscode.window.showInformationMessage(`Branch '${branchName}' deleted.`);
+            onRefresh();
+          } catch (err) {
+            vscode.window.showErrorMessage(
+              `Failed to delete branch: ${err instanceof Error ? err.message : err}`,
+            );
+          }
         }
       },
     ),

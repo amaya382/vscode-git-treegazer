@@ -52,8 +52,8 @@ export function registerWorktreeCommands(
       const confirm = await vscode.window.showWarningMessage(
         `Remove worktree '${branch}' with baretree? Also delete the branch?`,
         { modal: true },
-        "Remove Worktree Only",
         "Remove & Delete Branch",
+        "Remove Worktree Only",
       );
       if (!confirm) return;
 

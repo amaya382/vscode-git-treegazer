@@ -1254,21 +1254,73 @@ export class LogPanel implements vscode.WebviewViewProvider, vscode.Disposable {
     if (!service) return;
 
     if (refType === "branch") {
-      const confirm = await vscode.window.showWarningMessage(
-        `Delete branch '${ref}'?`,
-        { modal: true },
-        "Delete",
-        "Force Delete",
-      );
-      if (!confirm) return;
+      const wtPath = this.repoManager.getWorktreePathForBranch(ref);
+      if (wtPath) {
+        const isBt = await service.isBtRepo();
+        const confirm = await vscode.window.showWarningMessage(
+          `Branch '${ref}' has a worktree. Delete the branch and remove the worktree?`,
+          { modal: true },
+          "Remove Worktree & Delete Branch",
+          "Delete Branch Only",
+        );
+        if (!confirm) return;
 
-      try {
-        await service.deleteBranch(ref, confirm === "Force Delete");
-        vscode.window.showInformationMessage(`Branch '${ref}' deleted`);
-        this.refresh();
-        vscode.commands.executeCommand("gitTreegazer.refreshBranches");
-      } catch (err) {
-        vscode.window.showErrorMessage(`Delete failed: ${err instanceof Error ? err.message : String(err)}`);
+        try {
+          if (confirm === "Remove Worktree & Delete Branch") {
+            if (isBt) {
+              try {
+                await service.btRemoveWorktree(ref, true, false);
+              } catch {
+                const forceConfirm = await vscode.window.showWarningMessage(
+                  `Worktree '${ref}' has uncommitted changes. Force remove?`,
+                  { modal: true },
+                  "Force Remove",
+                );
+                if (forceConfirm !== "Force Remove") return;
+                await service.btRemoveWorktree(ref, true, true);
+              }
+            } else {
+              try {
+                await service.removeWorktree(wtPath, false);
+              } catch {
+                const forceConfirm = await vscode.window.showWarningMessage(
+                  `Worktree '${ref}' has uncommitted changes. Force remove?`,
+                  { modal: true },
+                  "Force Remove",
+                );
+                if (forceConfirm !== "Force Remove") return;
+                await service.removeWorktree(wtPath, true);
+              }
+              await service.deleteBranch(ref);
+            }
+            vscode.window.showInformationMessage(`Worktree and branch '${ref}' removed`);
+          } else {
+            await service.deleteBranch(ref);
+            vscode.window.showInformationMessage(`Branch '${ref}' deleted`);
+          }
+          this.refresh();
+          vscode.commands.executeCommand("gitTreegazer.refreshBranches");
+          vscode.commands.executeCommand("gitTreegazer.refreshWorktrees");
+        } catch (err) {
+          vscode.window.showErrorMessage(`Delete failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      } else {
+        const confirm = await vscode.window.showWarningMessage(
+          `Delete branch '${ref}'?`,
+          { modal: true },
+          "Delete",
+          "Force Delete",
+        );
+        if (!confirm) return;
+
+        try {
+          await service.deleteBranch(ref, confirm === "Force Delete");
+          vscode.window.showInformationMessage(`Branch '${ref}' deleted`);
+          this.refresh();
+          vscode.commands.executeCommand("gitTreegazer.refreshBranches");
+        } catch (err) {
+          vscode.window.showErrorMessage(`Delete failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
       }
     } else if (refType === "remote") {
       const confirm = await vscode.window.showWarningMessage(
