@@ -62,6 +62,7 @@ export const COMMANDS = {
   REBASE_ABORT: `${EXTENSION_ID}.rebaseAbort`,
   REBASE_SKIP: `${EXTENSION_ID}.rebaseSkip`,
   SHOW_LOG: `${EXTENSION_ID}.showLog`,
+  OPEN_FILE_IN_WORKTREE: `${EXTENSION_ID}.openFileInWorktree`,
 } as const;
 
 export const REBASE_ACTION_COLORS: Record<string, string> = {

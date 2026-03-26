@@ -93,6 +93,20 @@ export async function activate(
     });
   }
 
+  // Set initial showOpenInWorktree context and listen for config changes
+  const updateShowOpenInWorktreeContext = () => {
+    const show = vscode.workspace.getConfiguration("gitTreegazer").get<boolean>("showOpenInWorktree", true);
+    vscode.commands.executeCommand("setContext", "gitTreegazer.showOpenInWorktree", show);
+  };
+  updateShowOpenInWorktreeContext();
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration("gitTreegazer.showOpenInWorktree")) {
+        updateShowOpenInWorktreeContext();
+      }
+    }),
+  );
+
   // Initialize status bar
   const statusBar = new StatusBarManager(repoManager);
   context.subscriptions.push(statusBar);
@@ -100,6 +114,7 @@ export async function activate(
   // Refresh all views
   const refreshAll = async () => {
     await repoManager.refreshWorktreeMetadata();
+    vscode.commands.executeCommand("setContext", "gitTreegazer.hasWorktrees", repoManager.hasMultipleWorktrees());
     logPanel.refresh();
     branchTree.refresh();
     stashTree.refresh();
@@ -198,6 +213,7 @@ export async function activate(
   gitWatcher.onDidDelete(debouncedRefresh);
 
   // Initial refresh
+  vscode.commands.executeCommand("setContext", "gitTreegazer.hasWorktrees", repoManager.hasMultipleWorktrees());
   branchTree.refresh();
   stashTree.refresh();
   configTree.refresh();
