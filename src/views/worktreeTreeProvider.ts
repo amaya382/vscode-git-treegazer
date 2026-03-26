@@ -22,7 +22,7 @@ class WorktreeGroupItem extends vscode.TreeItem {
     this.id = `wt-group:${groupType}`;
     this.contextValue = `wtGroup_${groupType}`;
     if (groupType === "worktrees") {
-      this.iconPath = new vscode.ThemeIcon("list-tree");
+      this.iconPath = new vscode.ThemeIcon("worktree");
     } else if (groupType === "postCreate") {
       this.iconPath = new vscode.ThemeIcon("zap");
     } else {
@@ -39,7 +39,7 @@ class WorktreeEntryItem extends vscode.TreeItem {
 
     this.iconPath = worktree.isMain
       ? new vscode.ThemeIcon("star-full")
-      : new vscode.ThemeIcon("list-tree");
+      : new vscode.ThemeIcon("worktree");
 
     const shortHash = worktree.head.substring(0, 7);
     this.description = `${shortHash}  ${worktree.path}`;
