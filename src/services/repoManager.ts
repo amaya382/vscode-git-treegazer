@@ -317,6 +317,10 @@ export class RepoManager implements vscode.Disposable {
     }
   }
 
+  hasMultipleWorktrees(): boolean {
+    return this.worktreeGroups.size > 0;
+  }
+
   getWorktreeBranchNames(): Set<string> {
     const names = new Set<string>();
     for (const ref of this.worktreeBranches.values()) {
@@ -379,6 +383,33 @@ export class RepoManager implements vscode.Disposable {
     }
 
     return result;
+  }
+
+  getSiblingWorktrees(filePath: string): { branch: string; worktreePath: string }[] {
+    // Find which worktree the file belongs to
+    let ownerPath: string | undefined;
+    let ownerGroup: string | undefined;
+    for (const [wtPath, group] of this.worktreeGroups.entries()) {
+      if (filePath.startsWith(wtPath + path.sep) || filePath === wtPath) {
+        if (!ownerPath || wtPath.length > ownerPath.length) {
+          ownerPath = wtPath;
+          ownerGroup = group;
+        }
+      }
+    }
+    if (!ownerPath || !ownerGroup) return [];
+
+    // Collect all worktrees in the same group, excluding the owner
+    const siblings: { branch: string; worktreePath: string }[] = [];
+    for (const [wtPath, group] of this.worktreeGroups.entries()) {
+      if (group === ownerGroup && wtPath !== ownerPath) {
+        const ref = this.worktreeBranches.get(wtPath);
+        const branch = ref ? ref.replace(/^refs\/heads\//, "") : path.basename(wtPath);
+        siblings.push({ branch, worktreePath: wtPath });
+      }
+    }
+    siblings.sort((a, b) => a.branch.localeCompare(b.branch));
+    return siblings;
   }
 
   getWorktreePathForBranch(branchName: string): string | undefined {

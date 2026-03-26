@@ -236,6 +236,52 @@ export function registerWorktreeCommands(
       terminal.show();
     }),
 
+    vscode.commands.registerCommand(COMMANDS.OPEN_FILE_IN_WORKTREE, async (arg?: vscode.Uri) => {
+      const fileUri = arg ?? vscode.window.activeTextEditor?.document.uri;
+      if (!fileUri || fileUri.scheme !== "file") {
+        vscode.window.showErrorMessage("No file selected.");
+        return;
+      }
+
+      const filePath = fileUri.fsPath;
+      const siblings = repoManager.getSiblingWorktrees(filePath);
+      if (siblings.length === 0) {
+        vscode.window.showInformationMessage("No other worktrees found for this repository.");
+        return;
+      }
+
+      // Find the owning worktree path to compute relative path
+      let ownerPath: string | undefined;
+      for (const repo of repoManager.getRepoList()) {
+        if (filePath.startsWith(repo.path + path.sep) || filePath === repo.path) {
+          if (!ownerPath || repo.path.length > ownerPath.length) {
+            ownerPath = repo.path;
+          }
+        }
+      }
+      if (!ownerPath) return;
+
+      const relativePath = path.relative(ownerPath, filePath);
+
+      const picked = await vscode.window.showQuickPick(
+        siblings.map(s => ({
+          label: s.branch,
+          description: s.worktreePath,
+          worktreePath: s.worktreePath,
+        })),
+        { placeHolder: "Select worktree to open this file in" },
+      );
+      if (!picked) return;
+
+      const targetPath = path.join(picked.worktreePath, relativePath);
+      try {
+        await vscode.workspace.fs.stat(vscode.Uri.file(targetPath));
+        await vscode.commands.executeCommand("vscode.open", vscode.Uri.file(targetPath));
+      } catch {
+        vscode.window.showWarningMessage(`File does not exist in worktree: ${picked.label}`);
+      }
+    }),
+
     vscode.commands.registerCommand(COMMANDS.WORKTREE_SYNC_TO_ROOT_REMOVE, async (arg?: unknown) => {
       const service = repoManager.getActiveService();
       if (!service) return;

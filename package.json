@@ -409,6 +409,12 @@
         "title": "Git Treegazer: Show Log",
         "category": "Git Treegazer",
         "icon": "$(telescope)"
+      },
+      {
+        "command": "gitTreegazer.openFileInWorktree",
+        "title": "Open in Worktree...",
+        "category": "Git Treegazer",
+        "icon": "$(list-tree)"
       }
     ],
     "menus": {
@@ -720,6 +726,20 @@
           "command": "gitTreegazer.worktreeSyncToRootRemove",
           "when": "view == gitTreegazer.worktrees && viewItem == wtSyncToRootEntry",
           "group": "inline"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "gitTreegazer.openFileInWorktree",
+          "when": "gitTreegazer.hasWorktrees",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "gitTreegazer.openFileInWorktree",
+          "when": "gitTreegazer.hasWorktrees",
+          "group": "navigation"
         }
       ]
     },

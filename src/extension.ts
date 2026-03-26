@@ -100,6 +100,7 @@ export async function activate(
   // Refresh all views
   const refreshAll = async () => {
     await repoManager.refreshWorktreeMetadata();
+    vscode.commands.executeCommand("setContext", "gitTreegazer.hasWorktrees", repoManager.hasMultipleWorktrees());
     logPanel.refresh();
     branchTree.refresh();
     stashTree.refresh();
@@ -198,6 +199,7 @@ export async function activate(
   gitWatcher.onDidDelete(debouncedRefresh);
 
   // Initial refresh
+  vscode.commands.executeCommand("setContext", "gitTreegazer.hasWorktrees", repoManager.hasMultipleWorktrees());
   branchTree.refresh();
   stashTree.refresh();
   configTree.refresh();
