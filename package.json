@@ -81,6 +81,11 @@
           "type": "boolean",
           "default": true,
           "description": "Synchronize active repository selection with VSCode's built-in Source Control view"
+        },
+        "gitTreegazer.showOpenInWorktree": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show 'Open in Worktree...' in file context menus (explorer, editor, editor tab)"
         }
       }
     },
@@ -731,14 +736,21 @@
       "explorer/context": [
         {
           "command": "gitTreegazer.openFileInWorktree",
-          "when": "gitTreegazer.hasWorktrees",
+          "when": "gitTreegazer.hasWorktrees && gitTreegazer.showOpenInWorktree",
           "group": "navigation"
         }
       ],
       "editor/context": [
         {
           "command": "gitTreegazer.openFileInWorktree",
-          "when": "gitTreegazer.hasWorktrees",
+          "when": "gitTreegazer.hasWorktrees && gitTreegazer.showOpenInWorktree",
+          "group": "navigation"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "gitTreegazer.openFileInWorktree",
+          "when": "gitTreegazer.hasWorktrees && gitTreegazer.showOpenInWorktree",
           "group": "navigation"
         }
       ]
