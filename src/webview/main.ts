@@ -1315,7 +1315,7 @@ function buildCommitRow(commit: GitCommit, index: number, wtBranchOutCols?: numb
         if (wtInfo) {
           const wtIcon = document.createElement("span");
           wtIcon.className = "ref-icon";
-          wtIcon.innerHTML = `<span class="codicon codicon-list-tree" style="font-size:13px"></span>`;
+          wtIcon.innerHTML = `<span class="codicon codicon-worktree" style="font-size:13px"></span>`;
           label.appendChild(wtIcon);
           if (wtInfo.isDefault) {
             const defaultBadge = document.createElement("span");
@@ -1390,7 +1390,7 @@ function buildCommitRow(commit: GitCommit, index: number, wtBranchOutCols?: numb
           if (wtInfo) {
             const wtIcon = document.createElement("span");
             wtIcon.className = "ref-icon";
-            wtIcon.innerHTML = `<span class="codicon codicon-list-tree" style="font-size:13px"></span>`;
+            wtIcon.innerHTML = `<span class="codicon codicon-worktree" style="font-size:13px"></span>`;
             label.appendChild(wtIcon);
             if (wtInfo.isDefault) {
               const defaultBadge = document.createElement("span");
@@ -2944,12 +2944,12 @@ function showContextMenu(x: number, y: number, hash: string): void {
     },
     ...(baretreeAvailable ? [{
       label: "Create Worktree with baretree...",
-      icon: codicon("list-tree", 14),
+      icon: codicon("worktree", 14),
       action: () => vscode.postMessage({ type: "createWorktreeWithBaretreeFromCommit", hash }),
     }] : []),
     {
       label: "Create Worktree...",
-      icon: codicon("list-tree", 14),
+      icon: codicon("worktree", 14),
       action: () => vscode.postMessage({ type: "createWorktreeFromCommit", hash }),
       baretreeRecommended: baretreeAvailable,
     },
@@ -3081,7 +3081,7 @@ function showRefContextMenu(x: number, y: number, ref: RefInfo): void {
         });
         items.push({
           label: `Open Worktree`,
-          icon: codicon("list-tree", 14),
+          icon: codicon("worktree", 14),
           action: () => vscode.postMessage({ type: "openWorktree", branch: ref.name }),
         });
         items.push({
@@ -3125,13 +3125,13 @@ function showRefContextMenu(x: number, y: number, ref: RefInfo): void {
         if (baretreeAvailable) {
           items.push({
             label: `Create Worktree from '${ref.name}' with baretree`,
-            icon: codicon("list-tree", 14),
+            icon: codicon("worktree", 14),
             action: () => vscode.postMessage({ type: "createWorktreeWithBaretreeFromRef", ref: ref.name, refType: ref.type }),
           });
         }
         items.push({
           label: `Create Worktree from '${ref.name}'`,
-          icon: codicon("list-tree", 14),
+          icon: codicon("worktree", 14),
           action: () => vscode.postMessage({ type: "createWorktreeFromRef", ref: ref.name, refType: ref.type }),
           baretreeRecommended: baretreeAvailable,
         });
@@ -3139,13 +3139,13 @@ function showRefContextMenu(x: number, y: number, ref: RefInfo): void {
       if (baretreeAvailable) {
         items.push({
           label: `Create Worktree from This Branch with baretree`,
-          icon: codicon("list-tree", 14),
+          icon: codicon("worktree", 14),
           action: () => vscode.postMessage({ type: "createWorktreeFromBaseRefWithBaretree", ref: ref.name, refType: ref.type }),
         });
       }
       items.push({
         label: `Create Worktree from This Branch`,
-        icon: codicon("list-tree", 14),
+        icon: codicon("worktree", 14),
         action: () => vscode.postMessage({ type: "createWorktreeFromBaseRef", ref: ref.name, refType: ref.type }),
         baretreeRecommended: baretreeAvailable,
       });
@@ -3204,26 +3204,26 @@ function showRefContextMenu(x: number, y: number, ref: RefInfo): void {
       if (baretreeAvailable) {
         items.push({
           label: `Create Worktree from '${ref.name}' with baretree`,
-          icon: codicon("list-tree", 14),
+          icon: codicon("worktree", 14),
           action: () => vscode.postMessage({ type: "createWorktreeWithBaretreeFromRef", ref: ref.name, refType: "remote" }),
         });
       }
       items.push({
         label: `Create Worktree from '${ref.name}'`,
-        icon: codicon("list-tree", 14),
+        icon: codicon("worktree", 14),
         action: () => vscode.postMessage({ type: "createWorktreeFromRef", ref: ref.name, refType: "remote" }),
         baretreeRecommended: baretreeAvailable,
       });
       if (baretreeAvailable) {
         items.push({
           label: `Create Worktree from This Branch with baretree`,
-          icon: codicon("list-tree", 14),
+          icon: codicon("worktree", 14),
           action: () => vscode.postMessage({ type: "createWorktreeFromBaseRefWithBaretree", ref: ref.name, refType: "remote" }),
         });
       }
       items.push({
         label: `Create Worktree from This Branch`,
-        icon: codicon("list-tree", 14),
+        icon: codicon("worktree", 14),
         action: () => vscode.postMessage({ type: "createWorktreeFromBaseRef", ref: ref.name, refType: "remote" }),
         baretreeRecommended: baretreeAvailable,
       });
