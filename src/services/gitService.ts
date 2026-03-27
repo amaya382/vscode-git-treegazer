@@ -424,24 +424,18 @@ export class GitService {
 
     if (parents.length > 1) {
       // Merge commit: diff against the first parent to show all changes introduced by the merge
-      const raw = await this.git.raw([
-        "diff",
-        "--numstat",
-        "-M",
-        `${parents[0]}...${hash}`,
+      const [raw, nameStatusRaw] = await Promise.all([
+        this.git.raw(["diff", "--numstat", "-M", `${parents[0]}...${hash}`]),
+        this.git.raw(["diff", "--name-status", "-M", `${parents[0]}...${hash}`]),
       ]);
-      return this.parseDiffStat(raw);
+      return this.parseDiffStat(raw, this.parseNameStatus(nameStatusRaw));
     }
 
-    const raw = await this.git.raw([
-      "diff-tree",
-      "--no-commit-id",
-      "-r",
-      "--numstat",
-      "-M",
-      hash,
+    const [raw, nameStatusRaw] = await Promise.all([
+      this.git.raw(["diff-tree", "--no-commit-id", "-r", "--numstat", "-M", hash]),
+      this.git.raw(["diff-tree", "--no-commit-id", "-r", "--name-status", "-M", hash]),
     ]);
-    return this.parseDiffStat(raw);
+    return this.parseDiffStat(raw, this.parseNameStatus(nameStatusRaw));
   }
 
   async getMergedCommits(hash: string): Promise<MergedCommitSummary[]> {
@@ -582,8 +576,11 @@ export class GitService {
   }
 
   async getDiffBetween(hash1: string, hash2: string): Promise<DiffFile[]> {
-    const raw = await this.git.raw(["diff", "--numstat", "-M", hash1, hash2]);
-    return this.parseDiffStat(raw);
+    const [raw, nameStatusRaw] = await Promise.all([
+      this.git.raw(["diff", "--numstat", "-M", hash1, hash2]),
+      this.git.raw(["diff", "--name-status", "-M", hash1, hash2]),
+    ]);
+    return this.parseDiffStat(raw, this.parseNameStatus(nameStatusRaw));
   }
 
   async getFileContentAtCommit(hash: string, filePath: string): Promise<string> {
@@ -1203,13 +1200,11 @@ export class GitService {
   }
 
   async getStashDiff(index: number): Promise<DiffFile[]> {
-    const raw = await this.git.raw([
-      "stash",
-      "show",
-      "--numstat",
-      `stash@{${index}}`,
+    const [raw, nameStatusRaw] = await Promise.all([
+      this.git.raw(["stash", "show", "--numstat", `stash@{${index}}`]),
+      this.git.raw(["stash", "show", "--name-status", `stash@{${index}}`]),
     ]);
-    return this.parseDiffStat(raw);
+    return this.parseDiffStat(raw, this.parseNameStatus(nameStatusRaw));
   }
 
   async getRemoteUrl(remote = "origin"): Promise<string> {
@@ -1383,16 +1378,22 @@ export class GitService {
 
     // Staged files (index vs HEAD)
     try {
-      const raw = await this.git.raw(["-c", "core.quotePath=false", "diff", "--numstat", "-M", "--cached"]);
-      if (raw.trim()) stagedFiles = this.parseDiffStat(raw);
+      const [raw, nameStatusRaw] = await Promise.all([
+        this.git.raw(["-c", "core.quotePath=false", "diff", "--numstat", "-M", "--cached"]),
+        this.git.raw(["-c", "core.quotePath=false", "diff", "--name-status", "-M", "--cached"]),
+      ]);
+      if (raw.trim()) stagedFiles = this.parseDiffStat(raw, this.parseNameStatus(nameStatusRaw));
     } catch {
       // HEAD may not exist (initial commit)
     }
 
     // Unstaged files (worktree vs index)
     try {
-      const raw = await this.git.raw(["-c", "core.quotePath=false", "diff", "--numstat", "-M"]);
-      if (raw.trim()) unstagedFiles = this.parseDiffStat(raw);
+      const [raw, nameStatusRaw] = await Promise.all([
+        this.git.raw(["-c", "core.quotePath=false", "diff", "--numstat", "-M"]),
+        this.git.raw(["-c", "core.quotePath=false", "diff", "--name-status", "-M"]),
+      ]);
+      if (raw.trim()) unstagedFiles = this.parseDiffStat(raw, this.parseNameStatus(nameStatusRaw));
     } catch {
       // No unstaged changes
     }
@@ -1412,7 +1413,26 @@ export class GitService {
     return { stagedFiles, unstagedFiles, untrackedFiles };
   }
 
-  private parseDiffStat(raw: string): DiffFile[] {
+  // Parse `git diff --name-status` output into a map of path -> status letter
+  // For renames, maps the new path to "R" and the old path to the new path.
+  private parseNameStatus(raw: string): Map<string, string> {
+    const map = new Map<string, string>();
+    if (!raw.trim()) return map;
+    for (const line of raw.trim().split("\n")) {
+      if (!line.trim()) continue;
+      const parts = line.split("\t");
+      const statusLetter = parts[0][0]; // A, M, D, R, C, T, etc.
+      if (statusLetter === "R" || statusLetter === "C") {
+        // parts[1] = old path, parts[2] = new path
+        if (parts[2]) map.set(parts[2], statusLetter);
+      } else if (parts[1]) {
+        map.set(parts[1], statusLetter);
+      }
+    }
+    return map;
+  }
+
+  private parseDiffStat(raw: string, nameStatusMap?: Map<string, string>): DiffFile[] {
     if (!raw.trim()) return [];
     return raw
       .trim()
@@ -1444,12 +1464,22 @@ export class GitService {
           status = "renamed";
         } else {
           path = filePath;
-          if (additions > 0 && deletions === 0) {
+          const nsLetter = nameStatusMap?.get(path);
+          if (nsLetter === "A") {
             status = "added";
-          } else if (additions === 0 && deletions > 0) {
+          } else if (nsLetter === "D") {
             status = "deleted";
-          } else {
+          } else if (nsLetter === "M" || nsLetter !== undefined) {
             status = "modified";
+          } else {
+            // Fallback when name-status is not available
+            if (additions > 0 && deletions === 0) {
+              status = "added";
+            } else if (additions === 0 && deletions > 0) {
+              status = "deleted";
+            } else {
+              status = "modified";
+            }
           }
         }
 
