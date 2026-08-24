@@ -1,0 +1,107 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version (X.Y.Z, e.g. 0.5.0). No 'v' prefix."
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build VSCode vsix
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      vsix_name: ${{ steps.meta.outputs.vsix_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Determine version
+        id: meta
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            version="${{ github.event.inputs.version }}"
+          else
+            version="${GITHUB_REF#refs/tags/}"
+          fi
+          vsix_name="git-treegazer-${version}.vsix"
+          {
+            echo "version=${version}"
+            echo "vsix_name=${vsix_name}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Verify package.json version matches
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          pkg_version="$(node -p "require('./package.json').version")"
+          if [[ "${pkg_version}" != "${VERSION}" ]]; then
+            echo "::error::package.json version (${pkg_version}) does not match release version (${VERSION}). Run Bump Version workflow first."
+            exit 1
+          fi
+
+      - name: Compile
+        run: npm run compile
+
+      - name: Package VSCode extension
+        run: npx @vscode/vsce@^3.2.1 package --out "${{ steps.meta.outputs.vsix_name }}"
+
+      - name: Publish GitHub Release with vsix
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="${{ steps.meta.outputs.version }}"
+          vsix="${{ steps.meta.outputs.vsix_name }}"
+          if ! gh release view "${version}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release create "${version}" \
+              --repo "${{ github.repository }}" \
+              --title "${version}" \
+              --notes "Automated release. VSCode extension .vsix is attached." \
+              --draft=false \
+              --prerelease=false
+          fi
+          gh release upload "${version}" "${vsix}" --repo "${{ github.repository }}" --clobber
+
+      - name: Upload VSIX as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vsix
+          path: ${{ steps.meta.outputs.vsix_name }}
+          if-no-files-found: error
+          retention-days: 7
+
+  publish-vscode:
+    name: Publish to VSCode Marketplace
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: vsix
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Publish
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          vsix="${{ needs.build.outputs.vsix_name }}"
+          npx @vscode/vsce@^3.2.1 publish --packagePath "${vsix}"
